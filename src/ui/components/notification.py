@@ -1,4 +1,6 @@
-from ui.components.screen import UIScreen
+from src.models.type_models import UIActionsEnum
+
+from .screen import UIScreen
 
 
 class Notification(UIScreen):
@@ -10,5 +12,5 @@ class Notification(UIScreen):
         self.draw_box(buffer, x, y, len(text) + 4, 3)
         buffer.write(x + 2, y + 1, text)
 
-    def handle_input(self, user_input):
-        pass
+    def handle_action(self, action: UIActionsEnum) -> bool:
+        return False

@@ -1,12 +1,14 @@
 from abc import ABC, abstractmethod
 
+from src.models.type_models import UIActionsEnum
+
 
 class UIElement(ABC):
     @abstractmethod
     def draw(self, buffer) -> None: ...
 
     @abstractmethod
-    def handle_input(self, user_input: str) -> None: ...
+    def handle_action(self, action: UIActionsEnum) -> bool: ...
 
     def draw_box(self, buffer, x, y, w, h, title=""):
         buffer.write(x, y, "┌" + "─" * (w - 2) + "┐")

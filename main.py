@@ -1,9 +1,8 @@
 import signal
-from runtime.singletons import (
-    GAME_MANAGER,
-    LOGGER,
-)
-from models.enums import ExitCodeEnum
+from src.runtime.logger import LOGGER
+from src.runtime.managers.game import GAME_MANAGER
+from src.runtime.managers.ui import UI_MANAGER
+from src.models.type_models import ExitCodeEnum
 
 
 def setup_signals():
@@ -24,8 +23,6 @@ def setup_signals():
     def handle_signal(sig, frame):
         # Window Change (Resize)
         if hasattr(signal, "SIGWINCH") and sig == signal.SIGWINCH:
-            from runtime.singletons import UI_MANAGER
-
             UI_MANAGER.render()
             return
 

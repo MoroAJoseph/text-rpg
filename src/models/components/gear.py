@@ -1,4 +1,4 @@
-from models.enums import GearSlotEnum
+from models.type_models import GearSlotEnum
 from models.items.gear import Gear
 
 

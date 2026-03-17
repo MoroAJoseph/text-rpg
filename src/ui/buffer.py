@@ -14,13 +14,18 @@ class UIBuffer:
                     continue
                 self.grid[y][tx] = char
 
+    def dim(self, fg_dim: str = "90", bg_dim: str = "40"):
+        """Dim all visible characters in the buffer with ANSI codes."""
+        for y in range(self.height):
+            for x in range(self.width):
+                char = self.grid[y][x]
+                if char != " ":
+                    self.grid[y][x] = f"\033[{fg_dim};{bg_dim}m{char}\033[0m"
+
     def render_to_terminal(self):
         """Renders the grid using absolute positioning to prevent scrolling."""
         output = []
         for y, row in enumerate(self.grid):
-            # \033[{y+1};1H moves cursor to row y+1, column 1
-            # \033[K clears from cursor to end of line
             line = f"\033[{y+1};1H" + "".join(row) + "\033[K"
             output.append(line)
-
         sys.stdout.write("".join(output))

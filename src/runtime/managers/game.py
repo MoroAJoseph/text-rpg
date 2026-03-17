@@ -1,16 +1,25 @@
+# runtime/managers/game.py
 import sys
 from logging import Logger
-from models.enums import ExitCodeEnum, GameStateEnum
-from runtime.managers.ui import UIManager
-
-
-class ExitRequest:
-    def __init__(self, code: ExitCodeEnum, message: str):
-        self.code = code
-        self.message = message
+from src.runtime.logger import LOGGER
+from src.runtime.event_bus import EVENT_BUS
+from src.models.type_models import (
+    ExitCodeEnum,
+    ExitRequest,
+    GameStateEnum,
+    UIScreensEnum,
+    UIMenusEnum,
+    Event,
+    EventTypeEnum,
+    GameEventsEnum,
+    UIEventsEnum,
+)
+from .input import INPUT_MANAGER
 
 
 class GameManager:
+    """Singleton: manages game state, actions, and exit handling via events."""
+
     _instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -19,48 +28,92 @@ class GameManager:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, logger: Logger, ui_manager: UIManager):
+    def __init__(self, logger: Logger):
         if self._initialized:
             return
         self.logger = logger
-        self.ui_manager = ui_manager
         self.state = GameStateEnum.BOOT
         self.active_exit_request: ExitRequest | None = None
+
         self._initialized = True
-        self.logger.info("GameManager initialized via Injection.")
+        self.logger.info("GameManager initialized.")
 
+        # Register all game-related event handlers
+        self._register_event_listeners()
+
+    # --- Event Handlers ---
+    def _register_event_listeners(self):
+        EVENT_BUS.subscribe(GameEventsEnum.START_GAME, self._handle_start_game)
+        EVENT_BUS.subscribe(GameEventsEnum.LOAD_GAME, self._handle_load_game)
+        EVENT_BUS.subscribe(GameEventsEnum.SAVE_GAME, self._handle_save_game)
+        EVENT_BUS.subscribe(GameEventsEnum.EXIT_GAME, self._handle_exit_game)
+
+    def _handle_start_game(self, event: Event):
+        self.logger.info("Event: START_GAME")
+        # Directly perform the start-game logic
+        EVENT_BUS.emit(
+            Event(EventTypeEnum.UI, UIEventsEnum.CHANGE_SCREEN, UIScreensEnum.GAME)
+        )
+        EVENT_BUS.emit(
+            Event(EventTypeEnum.UI, UIEventsEnum.CHANGE_MENU, UIMenusEnum.WELCOME)
+        )
+
+    def _handle_load_game(self, event: Event):
+        self.logger.info("Event: LOAD_GAME")
+        # Directly perform the load-game logic
+        # TODO: add actual load logic here
+        EVENT_BUS.emit(
+            Event(EventTypeEnum.UI, UIEventsEnum.CHANGE_SCREEN, UIScreensEnum.GAME)
+        )
+
+    def _handle_save_game(self, event: Event):
+        self.logger.info("Event: SAVE_GAME")
+        # TODO: implement save logic
+
+    def _handle_exit_game(self, event: Event):
+        self.logger.info("Event: EXIT_GAME")
+        self.active_exit_request = ExitRequest(ExitCodeEnum.SUCCESS, "User quit")
+        self.state = GameStateEnum.EXIT
+        EVENT_BUS.emit(Event(EventTypeEnum.SYSTEM, UIEventsEnum.RENDER))
+
+    # --- Boot / Loop ---
     def bootloader(self):
-        from ui.screens.title import TitleScreen
-        from ui.menus.main import MainMenu
-
-        self.ui_manager.set_screen(TitleScreen())
-        self.ui_manager.push_overlay(MainMenu())
+        """Emit events to initialize the UI."""
+        EVENT_BUS.emit(
+            Event(EventTypeEnum.UI, UIEventsEnum.CHANGE_SCREEN, UIScreensEnum.TITLE)
+        )
+        EVENT_BUS.emit(
+            Event(EventTypeEnum.UI, UIEventsEnum.CHANGE_MENU, UIMenusEnum.MAIN)
+        )
         self.state = GameStateEnum.MAIN
-        self.logger.info("Bootloader complete: Title Screen + Main Menu active.")
+        self.logger.info("Bootloader complete: Title + Main Menu active.")
 
     def main_loop(self):
-        while self.state == GameStateEnum.MAIN:
-            self.ui_manager.render()
-            key = self.ui_manager.get_input()
-            self.ui_manager.process_input(key)
+        """Runs the main loop entirely via EventBus and InputManager."""
+        EVENT_BUS.emit(Event(EventTypeEnum.UI, UIEventsEnum.RENDER))
 
-            # Check for the exit request every loop iteration
+        while self.state == GameStateEnum.MAIN:
+
+            # Process all queued events
+            EVENT_BUS.process()
+
+            # Exit check
             if self.active_exit_request:
                 break
 
-    def request_exit(self, code: ExitCodeEnum, msg: str):
-        """Sets the exit request and transitions the state."""
-        self.active_exit_request = ExitRequest(code, msg)
-        self.state = GameStateEnum.EXIT
-        self.logger.warning(f"Exit requested: {msg} (Code: {code.name})")
+        # Stop input manager thread cleanly
+        INPUT_MANAGER.stop()
 
+    # --- Exit Handling ---
     def handle_exit(self):
-        """Final cleanup and OS exit."""
         if not self.active_exit_request:
-            self.logger.info("System exiting normally (Success).")
+            self.logger.info("System exiting normally.")
             sys.exit(ExitCodeEnum.SUCCESS.value)
 
         self.logger.info(
             f"System exiting with code {self.active_exit_request.code.value}"
         )
         sys.exit(self.active_exit_request.code.value)
+
+
+GAME_MANAGER = GameManager(logger=LOGGER)

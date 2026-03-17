@@ -1,7 +1,7 @@
-from ui.components.element import UIElement
+from .element import UIElement
 
 
 class UIScreen(UIElement):
-    """A full-context background (Title, Gameplay)."""
+    """Full-screen UI (title, gameplay)."""
 
     pass

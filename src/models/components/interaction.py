@@ -1,5 +1,5 @@
 from typing import List, Callable
-from models.enums import UIScreensEnum  # Assuming you'll map screens to enums
+from models.type_models import UIScreensEnum  # Assuming you'll map screens to enums
 
 
 class InteractionRequirement:

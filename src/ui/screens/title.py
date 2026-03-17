@@ -1,4 +1,5 @@
-from ui.components.screen import UIScreen
+from src.models.type_models import UIActionsEnum
+from ..components.screen import UIScreen
 
 
 class TitleScreen(UIScreen):
@@ -6,5 +7,9 @@ class TitleScreen(UIScreen):
         logo = "LOOT STUFF"
         buffer.write((buffer.width - len(logo)) // 2, 5, logo)
 
-    def handle_input(self, user_input):
-        pass
+    def handle_action(self, action: UIActionsEnum):
+        # Screens don't manage menus; maybe handle keyboard shortcuts if needed
+        return False
+
+
+TITLE_SCREEN = TitleScreen()

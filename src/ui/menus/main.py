@@ -1,9 +1,19 @@
-from ui.components.overlay import UIOverlay
-from models.enums import ExitCodeEnum
+from src.runtime.event_bus import EVENT_BUS
+from src.models.type_models import (
+    Event,
+    EventTypeEnum,
+    GameEventsEnum,
+    UIActionsEnum,
+    UIEventsEnum,
+)
+from ..components.overlay import UIOverlay
 
 
 class MainMenu(UIOverlay):
+    """Main menu overlay. Handles input events directly as enums."""
+
     def __init__(self):
+        super().__init__()
         self.options = ["New Game", "Load Game", "Exit"]
         self.index = 0
 
@@ -11,34 +21,33 @@ class MainMenu(UIOverlay):
         w, h = 30, 8
         x, y = (buffer.width - w) // 2, (buffer.height - h) // 2
         self.draw_box(buffer, x, y, w, h, "Main Menu")
-
         for i, opt in enumerate(self.options):
-            # The "Carrot" logic: prefix changes based on self.index
             prefix = " > " if i == self.index else "   "
             buffer.write(x + 4, y + 3 + i, f"{prefix}{opt}")
 
-    def handle_input(self, user_input: str) -> None:
-        from runtime.singletons import UI_MANAGER, GAME_MANAGER
-        from ui.screens.main import MainGameScreen
-        from ui.menus.welcome import WelcomeMenu
+    def handle_action(self, action: UIActionsEnum) -> bool:
+        old_index = self.index
 
-        # InputManager now sends "up", "down", "enter"
-        if user_input == "up":
+        if action == UIActionsEnum.NAV_UP:
             self.index = (self.index - 1) % len(self.options)
-        elif user_input == "down":
+
+        elif action == UIActionsEnum.NAV_DOWN:
             self.index = (self.index + 1) % len(self.options)
-        elif user_input == "enter":
-            self.execute_selection()
 
-    def execute_selection(self):
-        from runtime.singletons import UI_MANAGER, GAME_MANAGER
-        from ui.screens.main import MainGameScreen
-        from ui.menus.welcome import WelcomeMenu
+        elif action == UIActionsEnum.SELECT:
+            self._execute_selection()
+            return False
 
+        return self.index != old_index
+
+    def _execute_selection(self):
         choice = self.options[self.index]
         if choice == "New Game":
-            UI_MANAGER.set_screen(MainGameScreen())
-            UI_MANAGER.pop_overlay()
-            UI_MANAGER.push_overlay(WelcomeMenu())
+            EVENT_BUS.emit(Event(EventTypeEnum.GAME, GameEventsEnum.START_GAME))
+        elif choice == "Load Game":
+            EVENT_BUS.emit(Event(EventTypeEnum.GAME, GameEventsEnum.LOAD_GAME))
         elif choice == "Exit":
-            GAME_MANAGER.request_exit(ExitCodeEnum.SUCCESS, "User quit")
+            EVENT_BUS.emit(Event(EventTypeEnum.GAME, GameEventsEnum.EXIT_GAME))
+
+
+MAIN_MENU = MainMenu()
