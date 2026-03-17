@@ -13,8 +13,10 @@
 
 # --- UI ---
 
-# TODO: Clear the screen before exiting
-
+# TODO: Set anchor points for floating ui elements
+# TODO: Make notification component modular
+# TODO: Screens - Boot, Loading, Cinematic
+# TODO: Menus - Load Game, New Game, Settings, Pause, 
 # TODO: Dynamically update Main Menu options based on ConfigData
 
 # --- Gameplay ---

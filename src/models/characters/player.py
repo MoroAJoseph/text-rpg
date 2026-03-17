@@ -1,15 +1,17 @@
-from models.characters.character import Character
-from models.components.health import HealthComponent
-from models.components.combat import CombatComponent
-from models.components.inventory import InventoryComponent
+from ..components.health import HealthComponent
+from ..components.combat import CombatComponent
+from ..components.inventory import InventoryComponent
+from ..type_models import CharacterEntityData, PlayerEntityData
+from .character import Character
 
 
 class Player(Character):
 
-    def __init__(self, name: str, initial_current_health: int, initial_max_health: int):
-        super().__init__(name)
-        self.health_component = HealthComponent(
-            current=initial_current_health, maximum=initial_max_health
+    def __init__(self, data: PlayerEntityData):
+        character_data = CharacterEntityData(data.Name)
+        super().__init__(data=character_data)
+        self.health_component = HealthComponent(data=PlayerEntityData.HealthComponent)
+        self.combat_component = CombatComponent(data=PlayerEntityData.CombatComponent)
+        self.inventory_component = InventoryComponent(
+            data=PlayerEntityData.InventoryComponent
         )
-        self.combat_component = CombatComponent(can_attack=True, can_defend=True)
-        self.inventory_component = InventoryComponent(slots=20, item_stacks=[])

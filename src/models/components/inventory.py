@@ -1,6 +1,7 @@
 from typing import List
 
-from models.items.item import Item
+from ..items.item import Item
+from ..type_models import InventoryComponentData
 
 
 class ItemStack:
@@ -19,9 +20,9 @@ class ItemStack:
 
 class InventoryComponent:
 
-    def __init__(self, slots: int, item_stacks: List[ItemStack]):
-        self.slots: int = slots
-        self.item_stacks: List[ItemStack] = item_stacks
+    def __init__(self, data: InventoryComponentData):
+        self.slots: int = data.InventorySlots
+        self.item_stacks: List[ItemStack] = data.InventoryItems
 
     @property
     def used_slots(self):

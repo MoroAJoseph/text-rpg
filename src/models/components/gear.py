@@ -1,5 +1,5 @@
-from models.type_models import GearSlotEnum
-from models.items.gear import Gear
+from ..type_models import GearComponentData, GearSlotEnum
+from ..items.gear import Gear
 
 
 class GearSlot:
@@ -11,19 +11,12 @@ class GearSlot:
 
 class GearComponent:
 
-    def __init__(
-        self,
-        weapon_gear: Gear | None = None,
-        head_gear: Gear | None = None,
-        chest_gear: Gear | None = None,
-        ring_gear: Gear | None = None,
-        neck_gear: Gear | None = None,
-    ):
-        self.weapon_slot = GearSlot(GearSlotEnum.WEAPON, weapon_gear)
-        self.head_slot = GearSlot(GearSlotEnum.HEAD, head_gear)
-        self.chest_slot = GearSlot(GearSlotEnum.CHEST, chest_gear)
-        self.ring_slot = GearSlot(GearSlotEnum.RING, ring_gear)
-        self.neck_slot = GearSlot(GearSlotEnum.NECK, neck_gear)
+    def __init__(self, data: GearComponentData):
+        self.weapon_slot = GearSlot(GearSlotEnum.WEAPON, data.Weapon)
+        self.head_slot = GearSlot(GearSlotEnum.HEAD, data.Head)
+        self.chest_slot = GearSlot(GearSlotEnum.CHEST, data.Chest)
+        self.ring_slot = GearSlot(GearSlotEnum.RING, data.Ring)
+        self.neck_slot = GearSlot(GearSlotEnum.NECK, data.Neck)
 
     def get_slot_by_type(self, slot_type: GearSlotEnum) -> GearSlot:
         match slot_type:

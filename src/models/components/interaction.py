@@ -1,5 +1,5 @@
 from typing import List, Callable
-from models.type_models import UIScreensEnum  # Assuming you'll map screens to enums
+from ..type_models import UIScreensEnum  # Assuming you'll map screens to enums
 
 
 class InteractionRequirement:
@@ -15,7 +15,7 @@ class InteractionComponent:
 
     def __init__(
         self,
-        screen_type: UIScreensEnum,
+        screen_type: UIScreensEnum, # TODO: Menu not Screen
         requirements: List[InteractionRequirement] | None = None,
     ):
         self.screen_type = screen_type

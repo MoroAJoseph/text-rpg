@@ -1,6 +1,6 @@
 import signal
-from src.runtime.event_bus import EVENT_BUS
-from src.runtime.logger import LOGGER
+from src.runtime.core.event_bus import EVENT_BUS
+from src.runtime.core.logger import LOGGER
 from src.runtime.managers.game import GAME_MANAGER
 from src.runtime.managers.ui import UI_MANAGER
 from src.models.type_models import Event, EventTypeEnum, ExitCodeEnum, GameEventsEnum

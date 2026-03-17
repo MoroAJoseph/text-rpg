@@ -7,8 +7,8 @@ from src.models.type_models import (
     KeyInputEvent,
     MouseInputEvent,
 )
-from src.runtime.logger import LOGGER
-from ..event_bus import EVENT_BUS
+from src.runtime.core.logger import LOGGER
+from ..core.event_bus import EVENT_BUS
 
 
 class TelemetryManager:
