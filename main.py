@@ -1,8 +1,9 @@
 import signal
+from src.runtime.event_bus import EVENT_BUS
 from src.runtime.logger import LOGGER
 from src.runtime.managers.game import GAME_MANAGER
 from src.runtime.managers.ui import UI_MANAGER
-from src.models.type_models import ExitCodeEnum
+from src.models.type_models import Event, EventTypeEnum, ExitCodeEnum, GameEventsEnum
 
 
 def setup_signals():
@@ -31,7 +32,14 @@ def setup_signals():
         if exit_data:
             code, msg = exit_data
             LOGGER.info(f"OS signal [{sig}] intercepted: {msg}")
-            GAME_MANAGER.request_exit(code, msg)
+            # Corrected to a dictionary
+            EVENT_BUS.emit(
+                Event(
+                    EventTypeEnum.GAME,
+                    GameEventsEnum.EXIT_GAME,
+                    {"code": code, "msg": msg},
+                )
+            )
 
     def register_signals():
         # Exits

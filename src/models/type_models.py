@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, Union, TypeAlias
 
 
 # ---
@@ -19,18 +19,20 @@ class StrEnum(str, Enum):
         return name.lower()
 
 
-# Game-related enums
-class ExitCodeEnum(Enum):
-    """Standard exit codes for script/game termination.
+# --- Game ---
 
-    :cvar SUCCESS:
-    :cvar GENERAL_ERROR:
-    :cvar CLI_ERROR:
-    :cvar CANNOT_EXECUTE:
-    :cvar COMMAND_NOT_FOUND:
-    :cvar TERMINATED_BY_USER:
-    :cvar TERMINATED:
-    :cvar OUT_OF_RANGE:
+
+class ExitCodeEnum(Enum):
+    """Standard exit codes for application termination.
+
+    :cvar SUCCESS: Process finished successfully.
+    :cvar GENERAL_ERROR: Catch-all for general errors.
+    :cvar CLI_ERROR: Error in command-line arguments or usage.
+    :cvar CANNOT_EXECUTE: Command invoked cannot execute.
+    :cvar COMMAND_NOT_FOUND: Command or internal routine not found.
+    :cvar TERMINATED_BY_USER: User-initiated termination (e.g., Ctrl+C).
+    :cvar TERMINATED: System-initiated termination (e.g., SIGTERM).
+    :cvar OUT_OF_RANGE: Exit status out of range.
     """
 
     SUCCESS = auto()
@@ -44,11 +46,11 @@ class ExitCodeEnum(Enum):
 
 
 class GameStateEnum(Enum):
-    """Represents the current state of the game loop.
+    """High-level states of the game engine lifecycle.
 
-    :cvar BOOT:
-    :cvar MAIN:
-    :cvar EXIT:
+    :cvar BOOT: Initialization and loading phase.
+    :cvar MAIN: Active gameplay or menu loop.
+    :cvar EXIT: Cleanup and shutdown phase.
     """
 
     BOOT = auto()
@@ -56,13 +58,15 @@ class GameStateEnum(Enum):
     EXIT = auto()
 
 
-# UI-related enums
-class UIScreensEnum(Enum):
-    """Identifiers for full-screen contexts.
+# --- UI ---
 
-    :cvar BOOT:
-    :cvar TITLE:
-    :cvar GAME:
+
+class UIScreensEnum(Enum):
+    """Identifiers for full-screen UI contexts.
+
+    :cvar BOOT: The initial splash or loading screen.
+    :cvar TITLE: The main title/landing screen.
+    :cvar GAME: The primary gameplay interface.
     """
 
     BOOT = auto()
@@ -71,13 +75,13 @@ class UIScreensEnum(Enum):
 
 
 class UIMenusEnum(Enum):
-    """Identifiers for overlay menus.
+    """Identifiers for interactive overlay menus.
 
-    :cvar MAIN:
-    :cvar LOAD_GAME:
-    :cvar PAUSE:
-    :cvar SETTINGS:
-    :cvar WELCOME:
+    :cvar MAIN: The primary menu (New Game, Load, Exit).
+    :cvar LOAD_GAME: Save-file selection interface.
+    :cvar PAUSE: In-game pause overlay.
+    :cvar SETTINGS: Configuration and options interface.
+    :cvar WELCOME: Initial greeting or tutorial overlay.
     """
 
     MAIN = auto()
@@ -87,20 +91,41 @@ class UIMenusEnum(Enum):
     WELCOME = auto()
 
 
+class UIActionsEnum(Enum):
+    """Abstracted UI intents mapped from various input types.
+
+    :cvar NAV_UP: Move selection focus upward.
+    :cvar NAV_DOWN: Move selection focus downward.
+    :var NAV_LEFT: Move selection focus left.
+    :cvar NAV_RIGHT: Move selection focus right.
+    :cvar SELECT: Confirm or activate the current selection.
+    :cvar BACK: Return to the previous screen or close menu.
+    """
+
+    NAV_UP = auto()
+    NAV_DOWN = auto()
+    NAV_LEFT = auto()
+    NAV_RIGHT = auto()
+    SELECT = auto()
+    BACK = auto()
+
+
 class UINotificationsEnum(Enum):
-    """Identifiers for transient UI notifications."""
+    """Identifiers for transient notification types."""
 
     pass
 
 
-# Event-related enums
-class EventTypeEnum(Enum):
-    """High-level categories for events.
+# --- Event ---
 
-    :cvar GAME:
-    :cvar UI:
-    :cvar INPUT:
-    :cvar SYSTEM:
+
+class EventTypeEnum(Enum):
+    """Broad categories for the Event Bus to route.
+
+    :cvar GAME: High-level game logic and state changes.
+    :cvar UI: UI navigation, rendering, and menu triggers.
+    :cvar INPUT: Raw hardware input data.
+    :cvar SYSTEM: OS-level or application-wide signals.
     """
 
     GAME = auto()
@@ -110,12 +135,12 @@ class EventTypeEnum(Enum):
 
 
 class GameEventsEnum(Enum):
-    """Game-specific event identifiers.
+    """Specific event names for game-logic triggers.
 
-    :cvar START_GAME:
-    :cvar LOAD_GAME:
-    :cvar SAVE_GAME:
-    :cvar EXIT_GAME:
+    :cvar START_GAME: Trigger the transition into a new game session.
+    :cvar LOAD_GAME: Request loading state from a save file.
+    :cvar SAVE_GAME: Request current state persistence.
+    :cvar EXIT_GAME: Request the game to initiate shutdown.
     """
 
     START_GAME = auto()
@@ -125,12 +150,12 @@ class GameEventsEnum(Enum):
 
 
 class UIEventsEnum(Enum):
-    """UI-specific event identifiers.
+    """Specific event names for UI system triggers.
 
-    :cvar RENDER:
-    :cvar CHANGE_SCREEN:
-    :cvar CHANGE_MENU:
-    :cvar CLOSE_MENU:
+    :cvar RENDER: Force a full UI buffer refresh and terminal write.
+    :cvar CHANGE_SCREEN: Switch the current base screen.
+    :cvar CHANGE_MENU: Push a new menu overlay onto the stack.
+    :cvar CLOSE_MENU: Pop the top-most menu overlay from the stack.
     """
 
     RENDER = auto()
@@ -139,87 +164,103 @@ class UIEventsEnum(Enum):
     CLOSE_MENU = auto()
 
 
-class InputEventsEnum(Enum):
-    """Raw input events from the input system.
-
-    - Keys
-    :cvar KEY_ARROW_UP:
-    :cvar KEY_ARROW_DOWN:
-    :cvar KEY_ARROW_LEFT:
-    :cvar KEY_ARROW_RIGHT:
-    :cvar KEY_ENTER:
-    :cvar KEY_BACKSPACE:
-    :cvar KEY_ESCAPE:
-    :cvar KEY_ANY: Fallback for any other Key events
-
-    - Mouse Button
-    :cvar MB_1:
-    :cvar MB_2:
-    :cvar MB_3:
-    :cvar MB_4:
-    :cvar MB_5:
-    :cvar MB_ANY: Fallback for any other Mouse Button events
-
-    - Mouse Scroll
-    :cvar SCROLL_UP:
-    :cvar SCROLL_DOWN:
-    :cvar SCROLL_ANY: Fallback for any other Scroll event
-    """
-
-    # --- Keys ---
-    KEY_ARROW_UP = auto()
-    KEY_ARROW_DOWN = auto()
-    KEY_ARROW_LEFT = auto()
-    KEY_ARROW_RIGHT = auto()
-
-    KEY_ENTER = auto()
-    KEY_BACKSPACE = auto()
-
-    KEY_M = auto()
-    KEY_ESCAPE = auto()
-    KEY_ANY = auto()
-
-    # --- Mouse Button ---
-    MB_1 = auto()
-    MB_2 = auto()
-    MB_3 = auto()
-    MB_4 = auto()
-    MB_5 = auto()
-    MB_ANY = auto()
-
-    # --- Scroll ---
-    SCROLL_UP = auto()
-    SCROLL_DOWN = auto()
-    SCROLL_ANY = auto()
-
-
 class SystemEventsEnum(Enum):
-    """System-level events.
+    """Specific event names for system-level triggers.
 
-    :cvar EXIT:
+    :cvar EXIT: Application-wide termination signal.
     """
 
     EXIT = auto()
 
 
-class UIActionsEnum(Enum):
-    NAV_UP = auto()
-    NAV_DOWN = auto()
-    NAV_LEFT = auto()
-    NAV_RIGHT = auto()
-    SELECT = auto()
-    BACK = auto()
+# --- Input ---
 
 
-# Serialized data enums
+class KeyInputEnum(Enum):
+    """Identifiers for supported keyboard keys.
+
+    :cvar UP: The Up arrow key.
+    :cvar DOWN: The Down arrow key.
+    :cvar LEFT: The Left arrow key.
+    :cvar RIGHT: The Right arrow key.
+    :cvar ENTER: The Enter/Return key.
+    :cvar BACKSPACE: The Backspace key.
+    :cvar ESCAPE: The Escape key.
+    :cvar ANY: Generic fallback for unmapped keys.
+    """
+
+    UP = auto()
+    DOWN = auto()
+    LEFT = auto()
+    RIGHT = auto()
+    ENTER = auto()
+    BACKSPACE = auto()
+    ESCAPE = auto()
+    ANY = auto()
+
+
+class MouseInputEnum(Enum):
+    """Identifiers for mouse buttons.
+
+    :cvar LEFT: Primary mouse button (Button 1).
+    :cvar RIGHT: Secondary mouse button (Button 2).
+    :cvar MIDDLE: Scroll wheel button (Button 3).
+    :cvar MB_4: Auxiliary side button 1.
+    :cvar MB_5: Auxiliary side button 2.
+    :cvar ANY: Generic fallback for unmapped mouse buttons.
+    """
+
+    LEFT = auto()
+    RIGHT = auto()
+    MIDDLE = auto()
+    MB_4 = auto()
+    MB_5 = auto()
+    ANY = auto()
+
+
+class ScrollInputEnum(Enum):
+    """Identifiers for mouse wheel scroll directions.
+
+    :cvar UP: Scroll wheel moved upward.
+    :cvar DOWN: Scroll wheel moved downward.
+    :cvar ANY: Fallback for non-standard scroll inputs.
+    """
+
+    UP = auto()
+    DOWN = auto()
+    ANY = auto()
+
+
+class InputStateEnum(Enum):
+    """The physical state or action of an input device.
+
+    :cvar UP: Key or button was released.
+    :cvar DOWN: Key or button was pressed.
+    :cvar HELD: Key or button is being held down.
+    :cvar MOVE: Mouse cursor moved (for hover logic).
+    """
+
+    UP = auto()
+    DOWN = auto()
+    HELD = auto()
+    MOVE = auto()
+
+
+# Type alias for any input identifier
+InputEnum: TypeAlias = Union[KeyInputEnum, MouseInputEnum, ScrollInputEnum]
+
+
+# --- Serialized ---
+
+
 class GearSlotEnum(StrEnum):
-    """Inventory gear slot identifiers for items.
+    """Inventory slots available for equipment.
 
-    :cvar WEAPON: Weapon slot
-    :cvar HEAD: Headgear slot
-    :cvar CHEST: Chest armor slot
-    :cvar RING: Ring slot
-    :cvar NECK: Necklace slot
+    :cvar WEAPON: Weapon slot.
+    :cvar HEAD: Headgear slot.
+    :cvar CHEST: Chest armor slot.
+    :cvar RING: Ring slot.
+    :cvar NECK: Necklace slot.
     """
 
     WEAPON = auto()
@@ -233,6 +274,10 @@ class GearSlotEnum(StrEnum):
 # --- Dataclasses
 # ---
 
+
+# --- Events ---
+
+
 EventNameT = TypeVar("EventNameT", bound=Enum)
 EventDataT = TypeVar("EventDataT")
 
@@ -241,10 +286,9 @@ EventDataT = TypeVar("EventDataT")
 class Event(Generic[EventNameT, EventDataT]):
     """Represents a generic event to dispatch through the event manager.
 
-    Attributes:
-        type: High-level event category (EventTypeEnum)
-        name: Specific event identifier (GameEventsEnum, UIEventsEnum, etc.)
-        data: Optional data payload associated with the event
+    :param type: High-level event category (EventTypeEnum).
+    :param name: Specific event identifier (GameEventsEnum, UIEventsEnum, etc.).
+    :param data: Optional data payload associated with the event.
     """
 
     type: EventTypeEnum
@@ -256,10 +300,50 @@ class Event(Generic[EventNameT, EventDataT]):
 class ExitRequest:
     """Represents a request to exit the game.
 
-    Attributes:
-        code: ExitCodeEnum value indicating the reason for exit
-        message: Human-readable message describing the exit
+    :param code: ExitCodeEnum value indicating the reason for exit.
+    :param message: Human-readable message describing the exit.
     """
 
     code: ExitCodeEnum
     message: str
+
+
+# --- Input ---
+
+
+@dataclass
+class InputEvent:
+    """Base class for all processed hardware input interactions.
+
+    :param state: The current InputStateEnum (DOWN, UP, HELD, MOVE).
+    """
+
+    state: InputStateEnum
+
+
+@dataclass
+class KeyInputEvent(InputEvent):
+    """A keyboard-specific input event.
+
+    :param key: The KeyInputEnum identifier.
+    :param char: The actual string character pressed (if applicable).
+    :param is_special: True if it's a non-character key like ARROW_UP.
+    """
+
+    key: KeyInputEnum
+    char: str | None = None
+    is_special: bool = False
+
+
+@dataclass
+class MouseInputEvent(InputEvent):
+    """A mouse-specific input event.
+
+    :param button: The button pressed or scroll direction (None if only moving).
+    :param x: The horizontal terminal coordinate (1-based).
+    :param y: The vertical terminal coordinate (1-based).
+    """
+
+    button: Union[MouseInputEnum, ScrollInputEnum, None]
+    x: int
+    y: int

@@ -1,40 +1,51 @@
 import threading
+import time
+from typing import Dict, Any
 from blessed import Terminal
-from src.models.type_models import InputEventsEnum, Event, EventTypeEnum
+from src.models.type_models import (
+    Event,
+    EventTypeEnum,
+    KeyInputEnum,
+    MouseInputEnum,
+    ScrollInputEnum,
+    InputStateEnum,
+    KeyInputEvent,
+    MouseInputEvent,
+)
 from ..event_bus import EVENT_BUS
 from ..logger import LOGGER
 
 term = Terminal()
 
-# Keyboard mapping (terminal → InputEventsEnum)
+# Keyboard mapping
 KEY_MAP = {
-    "KEY_UP": InputEventsEnum.KEY_ARROW_UP,
-    "KEY_DOWN": InputEventsEnum.KEY_ARROW_DOWN,
-    "KEY_LEFT": InputEventsEnum.KEY_ARROW_LEFT,
-    "KEY_RIGHT": InputEventsEnum.KEY_ARROW_RIGHT,
-    "KEY_ENTER": InputEventsEnum.KEY_ENTER,
-    "KEY_ESCAPE": InputEventsEnum.KEY_ESCAPE,
-    "\n": InputEventsEnum.KEY_ENTER,
-    "\r": InputEventsEnum.KEY_ENTER,
-    "KEY_BACKSPACE": InputEventsEnum.KEY_BACKSPACE,
+    "KEY_UP": KeyInputEnum.UP,
+    "KEY_DOWN": KeyInputEnum.DOWN,
+    "KEY_LEFT": KeyInputEnum.LEFT,
+    "KEY_RIGHT": KeyInputEnum.RIGHT,
+    "KEY_ENTER": KeyInputEnum.ENTER,
+    "KEY_ESCAPE": KeyInputEnum.ESCAPE,
+    "\n": KeyInputEnum.ENTER,
+    "\r": KeyInputEnum.ENTER,
+    "KEY_BACKSPACE": KeyInputEnum.BACKSPACE,
 }
 
 # Mouse button mapping
 MOUSE_BUTTON_MAP = {
-    "BUTTON1": InputEventsEnum.MB_1,
-    "BUTTON2": InputEventsEnum.MB_2,
-    "BUTTON3": InputEventsEnum.MB_3,
-    "BUTTON4": InputEventsEnum.MB_4,
-    "BUTTON5": InputEventsEnum.MB_5,
+    "BUTTON1": MouseInputEnum.LEFT,
+    "BUTTON2": MouseInputEnum.MIDDLE,
+    "BUTTON3": MouseInputEnum.RIGHT,
+    "BUTTON4": MouseInputEnum.MB_4,
+    "BUTTON5": MouseInputEnum.MB_5,
 }
 
 
 class InputManager:
-    """Cross-platform terminal input manager using blessed."""
+    """Processes terminal signals into rich KeyInputEvent and MouseInputEvent objects."""
 
     _instance = None
     _lock = threading.RLock()
-    POLL_INTERVAL = 0.01
+    POLL_INTERVAL = 0.005  # Faster polling for lower latency
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -47,70 +58,97 @@ class InputManager:
             return
         self._stop_event = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
+
+        # State tracking
+        self.last_mouse_pos = (-1, -1)
+        self.key_states: Dict[KeyInputEnum, float] = {}
+
         self._initialized = True
-        LOGGER.info("InputManager (blessed) initialized.")
+        LOGGER.info("InputManager (Rich Events) initialized.")
         self._thread.start()
 
     def stop(self):
-        """Stop input thread."""
         self._stop_event.set()
         self._thread.join()
 
-    # --- Main loop ---
     def _run(self):
-        with term.cbreak(), term.keypad(), term.hidden_cursor():
-            # Enable mouse reporting
+        # ENTER_FULLSCREEN and alternate buffer to prevent scrollbars
+        print(term.enter_fullscreen + term.hide_cursor, end="", flush=True)
+
+        with term.cbreak(), term.keypad():
+            # Enable mouse reporting (SGR mode for better coordinate support)
             print(term.enable_mouse(), end="", flush=True)
 
             while not self._stop_event.is_set():
                 key = term.inkey(timeout=self.POLL_INTERVAL)
-                if not key:
-                    continue
 
-                # --- Mouse events ---
                 if key.name == "KEY_MOUSE":
                     me = term.mouse()
                     if me:
                         self._handle_mouse(me)
-                    continue
+                elif key:
+                    self._handle_keyboard(key)
 
-                # --- Keyboard events ---
-                name = key.name or str(key)
-                mapped = KEY_MAP.get(name)
-                if mapped:
-                    self._emit(mapped, "down")
-                else:
-                    self._emit(InputEventsEnum.KEY_ANY, str(key))
+                # Logic for HELD states could be processed here by checking self.key_states
 
-    # --- Mouse handler ---
+    def _handle_keyboard(self, key):
+        name = key.name or str(key)
+        mapped_key = KEY_MAP.get(name, KeyInputEnum.ANY)
+
+        is_special = key.is_sequence
+        state = InputStateEnum.DOWN
+
+        # Simple repeat detection: if pressed again very quickly, consider it 'HELD'
+        now = time.time()
+        if mapped_key in self.key_states and (now - self.key_states[mapped_key] < 0.1):
+            state = InputStateEnum.HELD
+
+        self.key_states[mapped_key] = now
+
+        event_data = KeyInputEvent(
+            state=state,
+            key=mapped_key,
+            char=str(key) if not is_special else None,
+            is_special=is_special,
+        )
+        self._emit(mapped_key, event_data)
+
     def _handle_mouse(self, me):
         """
-        me: blessed.mouse.MouseEvent
-        Attributes:
-            .event  → 'press', 'release', 'scroll'
-            .button → 'BUTTON1', 'BUTTON2', 'SCROLL_UP', 'SCROLL_DOWN', etc.
-            .x, .y
+        Processes blessed MouseEvent into MouseInputEvent.
+        Supports MOVE (hover), DOWN/UP (clicks), and SCROLL.
         """
-        btn = me.button
+        # Coordinate tracking for MOVE state
+        current_pos = (me.x, me.y)
+        if current_pos != self.last_mouse_pos:
+            self.last_mouse_pos = current_pos
+            # If the event is just movement, emit a MOVE event
+            if me.event == "move":
+                self._emit(
+                    MouseInputEnum.ANY,
+                    MouseInputEvent(
+                        state=InputStateEnum.MOVE, button=None, x=me.x, y=me.y
+                    ),
+                )
+                return
 
-        # Scroll events
-        if btn == "SCROLL_UP":
-            name = InputEventsEnum.SCROLL_UP
-        elif btn == "SCROLL_DOWN":
-            name = InputEventsEnum.SCROLL_DOWN
+        # Button Mapping
+        button = None
+        state = InputStateEnum.DOWN if me.event == "press" else InputStateEnum.UP
+
+        if me.button == "SCROLL_UP":
+            button = ScrollInputEnum.UP
+        elif me.button == "SCROLL_DOWN":
+            button = ScrollInputEnum.DOWN
         else:
-            # Map buttons
-            name = MOUSE_BUTTON_MAP.get(btn, InputEventsEnum.MB_ANY)
+            button = MOUSE_BUTTON_MAP.get(me.button, MouseInputEnum.ANY)
 
-        # Emit mouse input
-        self._emit(name, me.event)
+        event_data = MouseInputEvent(state=state, button=button, x=me.x, y=me.y)
+        self._emit(button or MouseInputEnum.ANY, event_data)
 
-    # --- Emit to EventBus ---
-    def _emit(self, name: InputEventsEnum, data):
-        """Emit event to EventBus."""
+    def _emit(self, name: Any, data: Any):
         with self._lock:
             EVENT_BUS.emit(Event(type=EventTypeEnum.INPUT, name=name, data=data))
-            LOGGER.debug(f"Input event emitted: {name.name} {data}")
 
 
 # Singleton instance

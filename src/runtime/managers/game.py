@@ -1,4 +1,5 @@
 # runtime/managers/game.py
+import os
 import sys
 from logging import Logger
 from src.runtime.logger import LOGGER
@@ -72,9 +73,18 @@ class GameManager:
 
     def _handle_exit_game(self, event: Event):
         self.logger.info("Event: EXIT_GAME")
-        self.active_exit_request = ExitRequest(ExitCodeEnum.SUCCESS, "User quit")
+
+        # Fallback to empty dict if data is None
+        data = event.data or {}
+
+        exit_code = data.get("code", ExitCodeEnum.SUCCESS)
+        exit_msg = data.get("msg", "No reason provided")
+
+        self.active_exit_request = ExitRequest(exit_code, exit_msg)
         self.state = GameStateEnum.EXIT
-        EVENT_BUS.emit(Event(EventTypeEnum.SYSTEM, UIEventsEnum.RENDER))
+
+        # Clears the screen
+        EVENT_BUS.emit(Event(EventTypeEnum.UI, UIEventsEnum.RENDER))
 
     # --- Boot / Loop ---
     def bootloader(self):
