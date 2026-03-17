@@ -6,7 +6,7 @@ import os
 
 def setup_logger(name: str) -> logging.Logger:
     log_dir = "logs"
-    config_path = "logger.config.json"
+    config_path = "config/logger.config.json"
 
     # Ensure directory exists before logger tries to write to it
     if not os.path.exists(log_dir):
