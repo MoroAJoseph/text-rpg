@@ -1,4 +1,21 @@
-# Title
+# Text RPG
+
+## Table of Contents
+
+1. [About](#about)
+2. [Setup](#setup)
+    - [Installation](#installation)
+    - [Running the Project](#running-the-project)
+        - [Production](#production)
+        - [Development](#development)
+3. [Project Structure](#project-structure)
+    - [Directory](#directory)
+    - [Directory Overview](#directory-overview)
+    - [Environment Files](#environment-files)
+    - [Entry Point](#entry-point)
+4. [Contribution](#contrubution)
+    - [Git CLI](#git-cli)
+    - [Design Principles](#design-principles)
 
 ## About
 
