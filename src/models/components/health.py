@@ -1,10 +1,13 @@
+from ..type_models import HealthComponentData
+
+
 class HealthComponent:
 
-    def __init__(self, current: int, maximum: int):
-        self.current: int = current
-        self.maximum: int = maximum
+    def __init__(self, data: HealthComponentData):
+        self.current: float = data.CurrentHealth
+        self.maximum: int = data.MaxHealth
 
-    def change_current(self, value: int):
+    def change_current(self, value: float):
         self.current = max(0, self.current + value)
 
     def change_max(self, value: int):

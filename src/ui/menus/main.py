@@ -1,7 +1,8 @@
-from src.runtime.event_bus import EVENT_BUS
+from src.runtime.core.event_bus import EVENT_BUS
 from src.models.type_models import (
     Event,
     EventTypeEnum,
+    ExitCodeEnum,
     GameEventsEnum,
     UIActionsEnum,
     UIEventsEnum,
@@ -47,7 +48,13 @@ class MainMenu(UIOverlay):
         elif choice == "Load Game":
             EVENT_BUS.emit(Event(EventTypeEnum.GAME, GameEventsEnum.LOAD_GAME))
         elif choice == "Exit":
-            EVENT_BUS.emit(Event(EventTypeEnum.GAME, GameEventsEnum.EXIT_GAME))
+            EVENT_BUS.emit(
+                Event(
+                    EventTypeEnum.GAME,
+                    GameEventsEnum.EXIT_GAME,
+                    {"code": ExitCodeEnum.SUCCESS, "msg": "Main Menu Exit"},
+                )
+            )
 
 
 MAIN_MENU = MainMenu()

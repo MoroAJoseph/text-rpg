@@ -1,8 +1,8 @@
 from __future__ import annotations
 from collections import defaultdict, deque
 from typing import Callable, Dict, List
-from src.models.type_models import Event
-from src.runtime.logger import LOGGER
+from src.models.type_models import Event, EventTypeEnum, UIEventsEnum
+from src.runtime.core.logger import LOGGER
 
 
 class EventBus:
@@ -51,9 +51,12 @@ class EventBus:
         while self._current_queue:
             event = self._current_queue.popleft()
             for callback in self._listeners.get(event.name, []):
-                LOGGER.debug(f"Calling {event}")
+                if (
+                    event.type != EventTypeEnum.TELEMETRY
+                    and event.name != UIEventsEnum.RENDER
+                ):
+                    LOGGER.debug(f"Calling {event}")
                 callback(event)
-        # Now next_queue contains events emitted during processing
 
 
 EVENT_BUS = EventBus()

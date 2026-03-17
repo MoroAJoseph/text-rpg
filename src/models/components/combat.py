@@ -1,8 +1,11 @@
+from ..type_models import CombatComponentData
+
+
 class CombatComponent:
 
-    def __init__(self, can_attack: bool, can_defend: bool):
-        self.can_attack: bool = can_attack
-        self.can_defend: bool = can_defend
+    def __init__(self, data: CombatComponentData):
+        self.can_attack: bool = data.CanAttack
+        self.can_defend: bool = data.CanDefend
 
     def change_can_attack(self, value: bool):
         self.can_attack = value

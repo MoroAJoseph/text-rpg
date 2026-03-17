@@ -1,4 +1,4 @@
-from src.ui.buffer import UIBuffer
+from src.ui.components.buffer import UIBuffer
 from src.ui.components.overlay import UIOverlay
 from src.models.type_models import UIActionsEnum
 
