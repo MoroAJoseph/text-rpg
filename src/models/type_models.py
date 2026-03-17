@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from enum import Enum, auto
 from typing import Generic, TypeVar, Union, TypeAlias
 
@@ -126,12 +126,14 @@ class EventTypeEnum(Enum):
     :cvar UI: UI navigation, rendering, and menu triggers.
     :cvar INPUT: Raw hardware input data.
     :cvar SYSTEM: OS-level or application-wide signals.
+    :cvar TELEMETRY: Performance and monitoring data.
     """
 
     GAME = auto()
     UI = auto()
     INPUT = auto()
     SYSTEM = auto()
+    TELEMETRY = auto()
 
 
 class GameEventsEnum(Enum):
@@ -171,6 +173,15 @@ class SystemEventsEnum(Enum):
     """
 
     EXIT = auto()
+
+
+class TelemetryEventsEnum(Enum):
+    """Performance and telemetry-specific event identifiers.
+
+    :cvar UPDATE: Trigger a refresh of telemetry data.
+    """
+
+    UPDATE = auto()
 
 
 # --- Input ---
@@ -316,9 +327,11 @@ class InputEvent:
     """Base class for all processed hardware input interactions.
 
     :param state: The current InputStateEnum (DOWN, UP, HELD, MOVE).
+    :param timestamp: The current timestamp at record time.
     """
 
     state: InputStateEnum
+    timestamp: float
 
 
 @dataclass
@@ -339,11 +352,37 @@ class KeyInputEvent(InputEvent):
 class MouseInputEvent(InputEvent):
     """A mouse-specific input event.
 
+    :param position: The (x,y) coordinates of the mouse cursor.
     :param button: The button pressed or scroll direction (None if only moving).
-    :param x: The horizontal terminal coordinate (1-based).
-    :param y: The vertical terminal coordinate (1-based).
+    :param state: State of the mouse input
+    :param timestamp: Timestamp of event
     """
 
-    button: Union[MouseInputEnum, ScrollInputEnum, None]
-    x: int
-    y: int
+    position: tuple[int, int]
+    button: str | None
+    state: InputStateEnum
+    timestamp: float
+
+
+# --- Telemetry ---
+
+
+@dataclass
+class TelemetryData:
+    """Real-time performance and input metrics.
+
+    :param fps: Current frames per second calculated from the game loop.
+    :param latency_ms: Input-to-process latency in milliseconds.
+    :param last_key: Descriptive string of the last processed keyboard input.
+    :param mouse_pos: Current (x, y) terminal coordinates of the mouse cursor.
+    :param active_hitboxes: Count of interactive regions currently registered in the UI.
+    """
+
+    fps: float | None = None
+    latency_ms: float | None = None
+    last_key: str | None = None
+    mouse_pos: tuple[int, int] | None = None
+    active_hitboxes: int | None = None
+
+    def to_dict(self) -> dict:
+        return asdict(self)

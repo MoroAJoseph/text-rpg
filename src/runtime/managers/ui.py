@@ -7,6 +7,7 @@ from src.runtime.logger import LOGGER
 from src.runtime.event_bus import EVENT_BUS
 from src.ui.components.buffer import UIBuffer
 from src.ui.components.background_overlay import BackgroundOverlay
+from src.ui.components.debug_overlay import DebugOverlay
 from src.ui.components.overlay import UIOverlay
 from src.ui.components.screen import UIScreen
 from src.ui.menus.main import MAIN_MENU
@@ -15,6 +16,8 @@ from src.ui.screens.game import GAME_SCREEN
 from src.ui.screens.title import TITLE_SCREEN
 from src.models.type_models import (
     EventTypeEnum,
+    TelemetryData,
+    TelemetryEventsEnum,
     UIActionsEnum,
     UIScreensEnum,
     UIMenusEnum,
@@ -42,6 +45,11 @@ class UIManager:
         if self._initialized:
             return
         self.logger: Logger = logger
+
+        # Flag managed by GameManager debug toggle
+        self.show_debug = True
+        self.debug_overlay = DebugOverlay()
+
         self.base_screen: UIScreen | None = None
         self.overlays: List[UIOverlay] = []
         self.screens: Dict[UIScreensEnum, UIScreen] = {}
@@ -51,33 +59,34 @@ class UIManager:
         self.hitboxes: List[Tuple[int, int, int, int, Callable]] = []
 
         self._initialized = True
-        self.logger.info("UIManager (Rich Input) initialized.")
+        self.logger.info("UIManager initialized (Telemetry delegated).")
         self._register_event_listeners()
 
     def _register_event_listeners(self):
+        # Core UI Events
         EVENT_BUS.subscribe(UIEventsEnum.RENDER, self._handle_render)
         EVENT_BUS.subscribe(UIEventsEnum.CHANGE_SCREEN, self._handle_change_screen)
         EVENT_BUS.subscribe(UIEventsEnum.CHANGE_MENU, self._handle_change_menu)
         EVENT_BUS.subscribe(UIEventsEnum.CLOSE_MENU, self._handle_close_menu)
 
-        # Subscribe to broad hardware categories
+        # Input Subscriptions
         EVENT_BUS.subscribe(KeyInputEnum.ANY, self._handle_key_input)
-        # Subscribe to specific keys that map to UI actions
-        for key in [
-            KeyInputEnum.UP,
-            KeyInputEnum.DOWN,
-            KeyInputEnum.ENTER,
-            KeyInputEnum.ESCAPE,
-        ]:
-            EVENT_BUS.subscribe(key, self._handle_key_input)
-
-        # Subscribe to mouse interactions
         EVENT_BUS.subscribe(EventTypeEnum.INPUT, self._handle_generic_input)
 
-    # --- Input Handling ---
+    # --- Input Processing ---
 
-    def _map_key_to_action(self, key: KeyInputEnum):
-        mapping = {
+    def _handle_generic_input(self, event: Event):
+        if isinstance(event.data, MouseInputEvent):
+            self._process_mouse(event.data)
+
+    def _handle_key_input(self, event: Event):
+        if (
+            not isinstance(event.data, KeyInputEvent)
+            or event.data.state != InputStateEnum.DOWN
+        ):
+            return
+
+        key_map = {
             KeyInputEnum.UP: UIActionsEnum.NAV_UP,
             KeyInputEnum.DOWN: UIActionsEnum.NAV_DOWN,
             KeyInputEnum.LEFT: UIActionsEnum.NAV_LEFT,
@@ -85,63 +94,22 @@ class UIManager:
             KeyInputEnum.ENTER: UIActionsEnum.SELECT,
             KeyInputEnum.ESCAPE: UIActionsEnum.BACK,
         }
-        return mapping.get(key)
 
-    def _handle_generic_input(self, event: Event):
-        """Routes MouseInputEvents and generic input data."""
-        if isinstance(event.data, MouseInputEvent):
-            self._process_mouse(event.data)
-
-    def _handle_key_input(self, event: Event):
-        """Processes KeyInputEvents into UI Actions."""
-        # Type guard: Ensure data is not None and is a KeyInputEvent
-        if not isinstance(event.data, KeyInputEvent):
-            self.logger.debug("Received key event with invalid or missing data.")
-            return
-
-        # Now the type checker knows key_event is definitely a KeyInputEvent
-        key_event: KeyInputEvent = event.data
-
-        if key_event.state != InputStateEnum.DOWN:
-            return
-
-        action = self._map_key_to_action(key_event.key)
-        if not action:
-            return
-
-        target = self.overlays[-1] if self.overlays else self.base_screen
-        if target and target.handle_action(action):
-            EVENT_BUS.emit(Event(type=EventTypeEnum.UI, name=UIEventsEnum.RENDER))
+        if action := key_map.get(event.data.key):
+            target = self.overlays[-1] if self.overlays else self.base_screen
+            if target and target.handle_action(action):
+                self.render()
 
     def _process_mouse(self, mouse_event: MouseInputEvent):
-        """Checks mouse coordinates against the hitbox registry."""
-        # Check for hover or click
+        """Standard collision detection for registered hitboxes."""
         for x1, y1, x2, y2, callback in self.hitboxes:
             if x1 <= mouse_event.x <= x2 and y1 <= mouse_event.y <= y2:
                 callback(mouse_event)
-                # If a click happened or hover state changed, we likely need a render
-                EVENT_BUS.emit(Event(EventTypeEnum.UI, UIEventsEnum.RENDER))
+                # Note: The callback itself should decide if a re-render is needed,
+                # but we usually re-render on any interaction to update visual states.
+                self.render()
 
-    # --- Event Handlers ---
-
-    def _handle_change_screen(self, event: Event):
-        """Processes screen change requests from the EventBus."""
-        if isinstance(event.data, UIScreensEnum):
-            self.show_screen(event.data)
-            self.render()
-
-    def _handle_change_menu(self, event: Event):
-        """Processes menu push requests from the EventBus."""
-        if isinstance(event.data, UIMenusEnum):
-            self.show_menu(event.data)
-            self.render()
-
-    def _handle_close_menu(self, _: Event):
-        """Processes menu pop requests from the EventBus."""
-        self.pop_menu()
-        self.render()
-
-    # --- Screen/Menu Controls ---
+    # --- Registry & State ---
 
     def register_screen(self, enum: UIScreensEnum, screen: UIScreen):
         self.screens[enum] = screen
@@ -149,51 +117,72 @@ class UIManager:
     def register_menu(self, enum: UIMenusEnum, menu: UIOverlay):
         self.menus[enum] = menu
 
-    def show_screen(self, enum: UIScreensEnum):
-        if screen := self.screens.get(enum):
-            self.base_screen = screen
-            self.overlays.clear()
-            self.hitboxes.clear()  # Clear interaction areas on screen change
-        else:
-            self.logger.warning(f"Screen {enum} not registered.")
+    def register_hitbox(self, x1: int, y1: int, x2: int, y2: int, callback: Callable):
+        self.hitboxes.append((x1, y1, x2, y2, callback))
 
-    def show_menu(self, enum: UIMenusEnum):
-        if menu := self.menus.get(enum):
-            self.overlays.append(BackgroundOverlay())
-            self.overlays.append(menu)
-        else:
-            self.logger.warning(f"Menu {enum} not registered.")
-
-    def pop_menu(self):
-        if self.overlays:
-            self.overlays.pop()  # Remove menu
-            if self.overlays and isinstance(self.overlays[-1], BackgroundOverlay):
-                self.overlays.pop()  # Remove dimming
-
-    # --- Rendering ---
-
-    def _handle_render(self, event: Event):
-        self.render()
+    # --- Rendering Heartbeat ---
 
     def render(self):
-        # Always clear hitboxes before a redraw so components can re-register them
+        # Reset hitboxes at start of frame
         self.hitboxes.clear()
 
         tw, th = shutil.get_terminal_size()
         buffer = UIBuffer(tw, max(1, th - 1))
 
+        # Layered Drawing
         if self.base_screen:
             self.base_screen.draw(buffer)
         for overlay in self.overlays:
             overlay.draw(buffer)
 
-        # Move cursor to home and write buffer
+        # Telemetry Sync: Send hitbox count to TelemetryManager
+        EVENT_BUS.emit(
+            Event(
+                type=EventTypeEnum.TELEMETRY,
+                name=TelemetryEventsEnum.UPDATE,
+                data=TelemetryData(active_hitboxes=len(self.hitboxes)),
+            )
+        )
+
+        if self.show_debug:
+            self.debug_overlay.draw(buffer)
+
+        # Final terminal output
         sys.stdout.write("\033[H")
         buffer.render_to_terminal()
         sys.stdout.flush()
 
+    # --- Event Handlers ---
 
+    def _handle_render(self, _: Event):
+        self.render()
+
+    def _handle_change_screen(self, event: Event):
+        if isinstance(event.data, UIScreensEnum):
+            if screen := self.screens.get(event.data):
+                self.base_screen = screen
+                self.overlays.clear()
+                self.render()
+
+    def _handle_change_menu(self, event: Event):
+        if isinstance(event.data, UIMenusEnum):
+            if menu := self.menus.get(event.data):
+                self.overlays.append(BackgroundOverlay())
+                self.overlays.append(menu)
+                self.render()
+
+    def _handle_close_menu(self, _: Event):
+        if self.overlays:
+            self.overlays.pop()  # Menu
+            if self.overlays and isinstance(self.overlays[-1], BackgroundOverlay):
+                self.overlays.pop()  # Dimmer
+            self.render()
+
+
+# Initialize Singleton
 UI_MANAGER = UIManager(logger=LOGGER)
+
+# Boot-time Registrations
 UI_MANAGER.register_screen(UIScreensEnum.TITLE, TITLE_SCREEN)
 UI_MANAGER.register_screen(UIScreensEnum.GAME, GAME_SCREEN)
 UI_MANAGER.register_menu(UIMenusEnum.MAIN, MAIN_MENU)
