@@ -1,6 +1,10 @@
 from dataclasses import asdict, dataclass
 from enum import Enum, auto
-from typing import Generic, TypeVar, Union, TypeAlias
+from typing import Generic, List, TypeVar, Union, TypeAlias
+
+from src.models.components.gear import GearSlot
+from src.models.components.inventory import ItemStack
+from src.models.items.gear import Gear
 
 
 # ---
@@ -286,6 +290,14 @@ class GearSlotEnum(StrEnum):
 # ---
 
 
+@dataclass
+class SerializableData:
+    pass
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
 # --- Events ---
 
 
@@ -386,3 +398,63 @@ class TelemetryData:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+# --- Components ---
+
+
+@dataclass
+class HealthComponentData(SerializableData):
+    CurrentHealth: float
+    MaxHealth: int
+    HealthRegenRate: float
+
+
+@dataclass
+class CombatComponentData(SerializableData):
+    CanAttack: bool
+    CanDefend: bool
+    CanBeHit: bool
+    CanBeDamaged: bool
+
+
+@dataclass
+class InventoryComponentData(SerializableData):
+    InventorySlots: int
+    InventoryItems: List[ItemStack]  # Map inventory slot number to item stack data
+
+
+@dataclass
+class InteractionComponentData(SerializableData):
+    pass
+
+
+@dataclass
+class GearComponentData(SerializableData):
+    Weapon: Gear | None
+    Head: Gear | None
+    Chest: Gear | None
+    Ring: Gear | None
+    Neck: Gear | None
+
+
+# --- Entity ---
+
+
+@dataclass
+class CharacterEntityData(SerializableData):
+    Name: str
+
+
+@dataclass
+class PlayerEntityData(CharacterEntityData):
+    HealthComponent: HealthComponentData
+    CombatComponent: CombatComponentData
+    InventoryComponent: InventoryComponentData
+
+
+@dataclass
+class EnemyEntityData(CharacterEntityData):
+    HealthComponent: HealthComponentData
+    CombatComponent: CombatComponentData
+    InventoryComponent: InventoryComponentData

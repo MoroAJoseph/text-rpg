@@ -1,12 +1,10 @@
 # VS Code
 .vscode/
 
-# Project folders
+# Project Meta Data
 /data
 /logs
-
-# Environment files
-
+.log
 
 # Python cache
 __pycache__/
@@ -17,6 +15,8 @@ venv/
 .venv/
 env/
 ENV/
+
+# Environment Variables
 .env
 .env.*
 !.env.example

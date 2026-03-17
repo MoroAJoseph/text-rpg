@@ -2,7 +2,7 @@
 
 import threading
 import time
-from src.runtime.event_bus import EVENT_BUS
+from src.runtime.core.event_bus import EVENT_BUS
 from src.models.type_models import (
     UIActionsEnum,
     Event,

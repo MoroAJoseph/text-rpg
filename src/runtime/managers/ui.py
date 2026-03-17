@@ -3,8 +3,8 @@ import sys
 from logging import Logger
 from typing import Dict, List, Tuple, Callable
 
-from src.runtime.logger import LOGGER
-from src.runtime.event_bus import EVENT_BUS
+from src.runtime.core.logger import LOGGER
+from src.runtime.core.event_bus import EVENT_BUS
 from src.ui.components.buffer import UIBuffer
 from src.ui.components.background_overlay import BackgroundOverlay
 from src.ui.components.debug_overlay import DebugOverlay

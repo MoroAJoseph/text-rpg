@@ -2,7 +2,7 @@ from __future__ import annotations
 from collections import defaultdict, deque
 from typing import Callable, Dict, List
 from src.models.type_models import Event, EventTypeEnum, UIEventsEnum
-from src.runtime.logger import LOGGER
+from src.runtime.core.logger import LOGGER
 
 
 class EventBus:

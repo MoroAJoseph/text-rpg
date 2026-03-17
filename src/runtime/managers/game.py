@@ -1,8 +1,8 @@
 import sys
 import time
 from logging import Logger
-from src.runtime.logger import LOGGER
-from src.runtime.event_bus import EVENT_BUS
+from src.runtime.core.logger import LOGGER
+from src.runtime.core.event_bus import EVENT_BUS
 from src.models.type_models import (
     ExitCodeEnum,
     ExitRequest,

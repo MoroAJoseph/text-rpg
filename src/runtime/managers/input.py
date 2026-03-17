@@ -10,8 +10,8 @@ from src.models.type_models import (
     TelemetryData,
     TelemetryEventsEnum,
 )
-from ..event_bus import EVENT_BUS
-from ..logger import LOGGER
+from ..core.event_bus import EVENT_BUS
+from ..core.logger import LOGGER
 
 term = Terminal()
 
