@@ -4,16 +4,16 @@ from .core import (
     CTX,
     Context,
     DomainManager,
-    ConnectionCapability,
     Clock,
     EventTypeEnum,
     SystemEventEnum,
     EngineOptions,
+    InputOptions,
     EventData,
 )
 
 # The Execution Factory
-from .api import create_engine, connect, EngineAPI, EventsAPI, SystemAPI, InputAPI
+from .api import create_engine, connect, APIStack, EventsAPI, SystemAPI, InputAPI
 
 # The Feature Domains (Expose only what is needed for type hinting or custom drivers)
 from .domains.input import (
@@ -21,6 +21,7 @@ from .domains.input import (
     InputEvent,
     InputStateEnum,
     InputEventEnum,
+    InputManager,
     BlessedInputDriver,
 )
 
@@ -30,16 +31,16 @@ __all__ = [
     "CTX",
     "Context",
     "DomainManager",
-    "ConnectionCapability",
     "Clock",
     "EventTypeEnum",
     "SystemEventEnum",
     "EngineOptions",
+    "InputOptions",
     "EventData",
     # API
     "create_engine",
     "connect",
-    "EngineAPI",
+    "APIStack",
     "EventsAPI",
     "SystemAPI",
     "InputAPI",
@@ -48,5 +49,7 @@ __all__ = [
     "InputEvent",
     "InputStateEnum",
     "InputEventEnum",
+    "InputManager",
+    "InputOptions",
     "BlessedInputDriver",
 ]

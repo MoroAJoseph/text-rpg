@@ -4,13 +4,34 @@ from enum import Enum, auto
 class KeyInputEnum(Enum):
     """Identifiers for supported keyboard keys.
 
-    :cvar UP: The Up arrow key.
-    :cvar DOWN: The Down arrow key.
-    :cvar LEFT: The Left arrow key.
-    :cvar RIGHT: The Right arrow key.
-    :cvar ENTER: The Enter/Return key.
-    :cvar BACKSPACE: The Backspace key.
-    :cvar ESCAPE: The Escape key.
+    :cvar UP: Arrow UP.
+    :cvar DOWN: Arrow DOWN.
+    :cvar LEFT: Arrow LEFT.
+    :cvar RIGHT: Arrow RIGHT.
+    :cvar ENTER:
+    :cvar BACKSPACE:
+    :cvar ESCAPE:
+    :cvar SPACE:
+    :cvar TAB:
+    :cvar HOME:
+    :cvar END:
+    :cvar PAGE_UP:
+    :cvar PAGE_DOWN:
+    :cvar INSERT:
+    :cvar DELETE:
+    :cvar F1:
+    :cvar F2:
+    :cvar F3:
+    :cvar F4:
+    :cvar F5:
+    :cvar F6:
+    :cvar F7:
+    :cvar F8:
+    :cvar F9:
+    :cvar F10:
+    :cvar F11:
+    :cvar F12:
+    :cvar CHAR:
     :cvar DEFAULT: Generic fallback for unmapped keys.
     """
 
@@ -22,6 +43,26 @@ class KeyInputEnum(Enum):
     BACKSPACE = auto()
     ESCAPE = auto()
     SPACE = auto()
+    TAB = auto()
+    HOME = auto()
+    END = auto()
+    PAGE_UP = auto()
+    PAGE_DOWN = auto()
+    INSERT = auto()
+    DELETE = auto()
+    F1 = auto()
+    F2 = auto()
+    F3 = auto()
+    F4 = auto()
+    F5 = auto()
+    F6 = auto()
+    F7 = auto()
+    F8 = auto()
+    F9 = auto()
+    F10 = auto()
+    F11 = auto()
+    F12 = auto()
+    CHAR = auto()  # For all alpha-numeric characters
     DEFAULT = auto()
 
 

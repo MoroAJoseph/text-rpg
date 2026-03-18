@@ -1,6 +1,8 @@
-from typing import List, TYPE_CHECKING
-from ..core import EngineOptions, ConnectionCapability
+from typing import TYPE_CHECKING
+
+from ..core import EngineOptions
 from ..domains.input import InputManager
+from .dataclasses import APIStack
 from .system import SystemAPI
 from .events import EventsAPI
 from .input import InputAPI
@@ -9,58 +11,29 @@ if TYPE_CHECKING:
     from ..core import Engine
 
 
-class EngineAPI:
-    """A dynamic container for requested API handles."""
-
-    if TYPE_CHECKING:
-        system: "SystemAPI"
-        events: "EventsAPI"
-        input: "InputAPI"
-
-    # We leave __init__ empty; attributes are added via setattr
-    def __init__(self):
-        pass
-
-
 def create_engine(options: EngineOptions = EngineOptions()) -> "Engine":
-    """Factory to produce and pre-configure a fresh Engine instance."""
+    """
+    Factory to produce a fresh Engine instance.
+    The Engine constructor handles the domain bootstrapping internally.
+    """
+
     from ..core.engine import Engine
 
-    engine = Engine(options)
-
-    # Dependency Injection: We wire domains to the kernel here
-    if options.use_input:
-        # Pass the bus from the engine's context to the manager
-        engine.register_manager("input", InputManager(bus=engine.ctx.bus))
-
-    return engine
+    return Engine(options)
 
 
-def connect(engine: "Engine", capabilities: List[ConnectionCapability]) -> EngineAPI:
-    """
-    Wires specific API handles to an instanced engine.
-    Only connects capabilities if the engine has the corresponding manager.
-    """
-    api = EngineAPI()
+def connect(engine: "Engine") -> APIStack:
+    """Automated API assembly based on Engine configuration."""
+    # 1. Initialize core APIs available to everyone
+    api_stack = APIStack(events=EventsAPI(engine), system=SystemAPI(engine))
 
-    # Mapping: Capability -> (Attribute Name, API Class, Manager Key)
-    # Note: System and Events are Core, so they don't need a manager check
-    mapping = {
-        ConnectionCapability.SYSTEM: ("system", SystemAPI, None),
-        ConnectionCapability.EVENTS: ("events", EventsAPI, None),
-        ConnectionCapability.INPUT: ("input", InputAPI, "input"),
-    }
+    # 2. Resolve Input API if enabled
+    if engine.options.input.enabled:
+        # Late import to prevent circularity between API and Domains
+        from ..domains.input.manager import InputManager
 
-    for capability in capabilities:
-        if capability not in mapping:
-            continue
+        manager = engine.get_manager("input", InputManager)
+        if manager:
+            api_stack.input = InputAPI(manager)
 
-        attr_name, api_class, manager_key = mapping[capability]
-
-        # If it's a domain manager, verify it exists before connecting the API
-        if manager_key and manager_key not in engine.managers:
-            continue
-
-        setattr(api, attr_name, api_class(engine))
-
-    return api
+    return api_stack

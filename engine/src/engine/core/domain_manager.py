@@ -1,17 +1,15 @@
 from typing import Protocol, TypeVar, runtime_checkable
 
+from .event import EngineEventBus
+
 
 @runtime_checkable
 class DomainManager(Protocol):
     """The interface all domain managers must implement."""
 
-    def update(self, dt: float) -> None:
-        """Called every frame. dt is the time in seconds since the last frame."""
-        ...
-
-    def shutdown(self) -> None:
-        """Cleanup resources."""
-        ...
+    def register_bus(self, bus: EngineEventBus) -> None: ...
+    def update(self, dt: float) -> None: ...
+    def shutdown(self) -> None: ...
 
 
 TDomainManager = TypeVar("TDomainManager", bound=DomainManager)

@@ -1,13 +1,9 @@
-from typing import TYPE_CHECKING
 from ..domains.input import InputManager, InputStateEnum, KeyInputEnum
-
-if TYPE_CHECKING:
-    from engine.core.engine import Engine
 
 
 class InputAPI:
-    def __init__(self, engine: "Engine"):
-        self._manager: InputManager | None = engine.get_manager("input", InputManager)
+    def __init__(self, manager: InputManager):
+        self._manager: InputManager = manager
 
     def is_pressed(self, key: KeyInputEnum) -> bool:
         """Instant check for key state."""

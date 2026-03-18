@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from typing import Any, Union
-
 from engine.core import EventData
 from .enums import (
     InputEventEnum,

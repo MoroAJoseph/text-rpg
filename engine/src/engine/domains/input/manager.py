@@ -1,153 +1,118 @@
 import time
-from typing import Dict, List, Optional, Union
-
+from typing import Dict, Optional
 from engine.core import (
     EventData,
     EngineEventBus,
     EventTypeEnum,
     DomainManager,
+    DomainDriver,
 )
-
-from .provider import InputProvider
 from .telemetry import InputTelemetry
-from .enums import (
-    InputEventEnum,
-    InputStateEnum,
-    KeyInputEnum,
-    MouseInputEnum,
-    ScrollInputEnum,
-)
-from .dataclasses import InputEvent, InputEventData, InputIdentifier
+from .enums import InputStateEnum, ScrollInputEnum
+from .dataclasses import InputEvent, InputIdentifier
 
 
 class InputManager(DomainManager):
-    """
-    Orchestrates input hardware polling and state normalization.
+    """Orchestrates hardware polling and key-decay synthesis."""
 
-    Acts as a bridge between low-level drivers (Providers) and the Engine Bus.
-    Handles 'Key Decay' to synthesize RELEASED states for terminal environments
-    that do not provide native key-up events.
-    """
+    def __init__(self):
+        self._bus: Optional[EngineEventBus] = None
+        self.driver: Optional[DomainDriver] = None
+        self.telemetry: Optional[InputTelemetry] = None
 
-    def __init__(self, bus: EngineEventBus):
-        self._bus: EngineEventBus = bus
-        self._providers: List[InputProvider] = []
-
-        # Tracks the current state of every input identifier (Key, Mouse, or Scroll)
         self._key_states: Dict[InputIdentifier, InputStateEnum] = {}
-
-        # Tracking for decay logic (Time since last 'PRESSED' signal)
         self._key_timers: Dict[InputIdentifier, float] = {}
-        self._decay_threshold: float = 0.12
+        self._key_metadata: Dict[InputIdentifier, str] = {}
+        self._decay_threshold: float = 0.12  # TODO: get from input options
 
+    def register_bus(self, bus: EngineEventBus) -> None:
+        self._bus = bus
         self.telemetry = InputTelemetry(bus=self._bus)
 
+    def register_driver(self, driver: DomainDriver) -> None:
+        self.driver = driver
+
     def update(self, dt: float):
-        """
-        Processes one engine frame of input.
+        if not self._bus or not self.telemetry:
+            return
 
-        Args:
-            dt (float): Delta time since the last frame.
-        """
         start = time.perf_counter()
-        total_new_events = 0
 
-        # 1. Handle synthetic releases for keys that haven't been 'refreshed'
+        # 1. Decay keys (Synthesize RELEASED)
         self._handle_key_decay(dt)
 
-        # 2. Poll all registered hardware providers
-        for provider in self._providers:
-            events: List[InputEvent] = provider.poll()
-            total_new_events += len(events)
+        # 2. Poll Driver
+        events = self.driver.poll() if self.driver else []
+        for event in events:
+            # Reset timer: this key is still physically active
+            self._key_timers[event.identifier] = 0.0
+            self._process_input(event)
 
-            for event in events:
-                # Reset decay timer for this specific identifier
-                self._key_timers[event.identifier] = 0.0
-                self._process_input(event)
-
-        # 3. Update telemetry metrics
-        self.telemetry.record_poll(start, total_new_events)
+        # 3. Telemetry
+        self.telemetry.record_poll(start, len(events))
         self.telemetry.update_state(len(self._key_states))
 
-    def add_provider(self, provider: InputProvider):
-        """Registers a new hardware input source."""
-        self._providers.append(provider)
-
-    def shutdown(self):
-        """Cleans up all providers and state tracking."""
-        self._providers.clear()
-        self._key_states.clear()
-        self._key_timers.clear()
-
     def _handle_key_decay(self, dt: float):
-        """Synthesizes RELEASED events for keys exceeding the decay threshold."""
+        """Releases keys that haven't been polled recently."""
         keys_to_release = []
         for identifier, elapsed in self._key_timers.items():
             new_elapsed = elapsed + dt
             self._key_timers[identifier] = new_elapsed
 
             if new_elapsed > self._decay_threshold:
-                # Only release if it's currently marked as PRESSED or HELD
                 if self._key_states.get(identifier) != InputStateEnum.RELEASED:
                     keys_to_release.append(identifier)
 
         for identifier in keys_to_release:
             self._emit_synthetic_event(identifier, InputStateEnum.RELEASED)
-            # Remove from timers to stop tracking until next press
+            # Stop tracking the timer once released
             self._key_timers.pop(identifier, None)
 
     def _process_input(self, event: InputEvent):
-        """
-        Normalizes input and performs double-emission for routing.
-        """
-        # Ignore redundant state changes (e.g., multiple PRESSED signals)
-        current_state: Optional[InputStateEnum] = self._key_states.get(event.identifier)
-        if current_state == event.state:
+        # Check if this is a scroll impulse
+        if isinstance(event.identifier, ScrollInputEnum):
+            # Scrolls are fire-and-forget. We don't track state or timers.
+            self._emit_to_bus(event.identifier, event)
             return
 
+        # Standard Key Logic (Press/Hold/Decay)
+        current = self._key_states.get(event.identifier)
+
+        if current == InputStateEnum.PRESSED and event.state == InputStateEnum.PRESSED:
+            event.state = InputStateEnum.HELD
+
+        if current == event.state:
+            return
+
+        self._key_metadata[event.identifier] = event.raw_data
         self._key_states[event.identifier] = event.state
-
-        # Determine Category for EventData.name
-        if isinstance(event.identifier, KeyInputEnum):
-            category = InputEventEnum.KEYBOARD
-        elif isinstance(event.identifier, MouseInputEnum):
-            category = InputEventEnum.MOUSE
-        elif isinstance(event.identifier, ScrollInputEnum):
-            category = InputEventEnum.SCROLL
-        else:
-            return
-
-        # Double Emission:
-        # 1. Emit to Category (e.g., InputEventEnum.KEYBOARD)
-        # 2. Emit to Specific Identifier (e.g., KeyInputEnum.SPACE)
-        self._emit_to_bus(category, event)
         self._emit_to_bus(event.identifier, event)
 
     def _emit_synthetic_event(self, identifier: InputIdentifier, state: InputStateEnum):
-        """Synthesizes a state change event (usually RELEASED)."""
         self._key_states[identifier] = state
 
+        # NEW: Retrieve the character string instead of using "decay"
+        raw = self._key_metadata.get(identifier, "unknown")
+
         event = InputEvent(
-            identifier=identifier,
-            state=state,
-            timestamp=time.time(),
-            raw_data="synthetic_decay",
+            identifier=identifier, state=state, timestamp=time.time(), raw_data=raw
         )
 
-        # Determine Category
-        if isinstance(identifier, KeyInputEnum):
-            cat = InputEventEnum.KEYBOARD
-        elif isinstance(identifier, MouseInputEnum):
-            cat = InputEventEnum.MOUSE
-        else:
-            cat = InputEventEnum.SCROLL
-
-        self._emit_to_bus(cat, event)
         self._emit_to_bus(identifier, event)
 
-    def _emit_to_bus(
-        self, routing_name: Union[InputEventEnum, InputIdentifier], event: InputEvent
-    ):
-        """Helper to wrap data in the standard Engine Packet format."""
-        packet = EventData(type=EventTypeEnum.INPUT, name=routing_name, data=event)
-        self._bus.emit(packet)
+        # Cleanup metadata after release
+        if state == InputStateEnum.RELEASED:
+            self._key_metadata.pop(identifier, None)
+
+    def _emit_to_bus(self, identifier: InputIdentifier, event: InputEvent):
+        """Single point of emission. Routes by the specific identifier."""
+        if self._bus:
+            packet = EventData(type=EventTypeEnum.INPUT, name=identifier, data=event)
+            self._bus.emit(packet)
+
+    def shutdown(self):
+        if self.driver:
+            self.driver.shutdown()
+        self._key_states.clear()
+        self._key_timers.clear()
+        self._key_metadata.clear()

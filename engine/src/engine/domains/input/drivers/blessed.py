@@ -1,16 +1,17 @@
 import time
-from typing import List, Dict, Optional
+from typing import List, Dict
 from blessed import Terminal
 from blessed.keyboard import Keystroke
 
+from engine.core import DomainDriver
 from ..dataclasses import InputEvent
-from ..enums import InputStateEnum, KeyInputEnum
+from ..enums import InputStateEnum, KeyInputEnum, ScrollInputEnum
 
 
-class BlessedInputDriver:
+class BlessedInputDriver(DomainDriver):
     """
-    Blessed-specific implementation of InputProvider.
-    Maps terminal-specific keyboard sequences to normalized Engine identifiers.
+    Blessed-specific implementation of DomainDriver.
+    Maps terminal sequences to normalized Engine identifiers.
     """
 
     # Mapping Blessed's named keys to internal Enums
@@ -21,53 +22,82 @@ class BlessedInputDriver:
         "KEY_RIGHT": KeyInputEnum.RIGHT,
         "KEY_ENTER": KeyInputEnum.ENTER,
         "KEY_ESCAPE": KeyInputEnum.ESCAPE,
+        "KEY_DELETE": KeyInputEnum.DELETE,
+        "KEY_BACKSPACE": KeyInputEnum.BACKSPACE,
+        "KEY_TAB": KeyInputEnum.TAB,
+        "KEY_HOME": KeyInputEnum.HOME,
+        "KEY_END": KeyInputEnum.END,
+        "KEY_PGUP": KeyInputEnum.PAGE_UP,
+        "KEY_PGDOWN": KeyInputEnum.PAGE_DOWN,
+        "KEY_INSERT": KeyInputEnum.INSERT,
         " ": KeyInputEnum.SPACE,
         "\n": KeyInputEnum.ENTER,
         "\r": KeyInputEnum.ENTER,
-        "KEY_BACKSPACE": KeyInputEnum.BACKSPACE,
     }
 
-    def __init__(self, terminal: Terminal):
-        """
-        Initializes the driver with a shared Blessed Terminal instance.
+    # Add F-Keys dynamically
+    for i in range(1, 13):
+        KEY_MAP[f"KEY_F{i}"] = getattr(KeyInputEnum, f"F{i}")
 
-        Args:
-            terminal (Terminal): The active Blessed terminal context.
-        """
+    def __init__(self, terminal: Terminal):
         self.term = terminal
 
     def poll(self) -> List[InputEvent]:
-        """
-        Non-blocking poll of terminal input.
-
-        Returns:
-            List[InputEvent]: A list of normalized input events captured
-                during this frame.
-        """
         events: List[InputEvent] = []
-
-        # timeout=0 ensures we don't hang the engine frame
-        # inkey() returns a Keystroke object which is also a string
         key: Keystroke = self.term.inkey(timeout=0)
         now: float = time.time()
 
-        if key:
-            # Use the key.name if available (e.g., 'KEY_UP'),
-            # otherwise use the raw character (e.g., ' ')
-            name: str = key.name if key.name else str(key)
-            mapped_identifier: KeyInputEnum = self.KEY_MAP.get(
-                name, KeyInputEnum.DEFAULT
-            )
+        if not key:
+            return events
 
-            # Terminal drivers are typically stream-based (no native 'Key Up').
-            # We emit as PRESSED; the InputManager handles decay to RELEASED.
-            events.append(
-                InputEvent(
-                    identifier=mapped_identifier,
-                    state=InputStateEnum.PRESSED,
-                    timestamp=now,
-                    raw_data=name,
+        # 1. Handle Mouse/Scroll decoding
+        if key.is_sequence and key.name == "KEY_MOUSE":
+            # Blessed mouse events are decoded into: [button_code, x, y]
+            # Scroll Up is usually button 4 (code 64 or 4)
+            # Scroll Down is usually button 5 (code 65 or 5)
+            # The 'code' attribute in Blessed for mouse sequences often maps:
+            # 64 = Scroll Up, 65 = Scroll Down
+
+            if key.code == 64:
+                events.append(
+                    InputEvent(
+                        identifier=ScrollInputEnum.UP,
+                        state=InputStateEnum.PRESSED,
+                        timestamp=now,
+                        raw_data="scroll",
+                    )
                 )
-            )
+            elif key.code == 65:
+                events.append(
+                    InputEvent(
+                        identifier=ScrollInputEnum.DOWN,
+                        state=InputStateEnum.PRESSED,
+                        timestamp=now,
+                        raw_data="scroll",
+                    )
+                )
+            return events
 
+        # 2. Standard Keyboard Logic
+        name = key.name if key.name else str(key)
+
+        if name in self.KEY_MAP:
+            mapped_id = self.KEY_MAP[name]
+        elif len(str(key)) == 1:
+            mapped_id = KeyInputEnum.CHAR
+        else:
+            mapped_id = KeyInputEnum.DEFAULT
+
+        events.append(
+            InputEvent(
+                identifier=mapped_id,
+                state=InputStateEnum.PRESSED,
+                timestamp=now,
+                raw_data=str(key),
+            )
+        )
         return events
+
+    def shutdown(self) -> None:
+        """Satisfies DomainDriver protocol. Cleanup is handled by Blessed's context."""
+        pass

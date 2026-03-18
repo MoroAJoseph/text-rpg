@@ -30,14 +30,6 @@ class ExitCodeEnum(Enum):
     USER_QUIT = 130
 
 
-class ConnectionCapability(Enum):
-    SYSTEM = auto()
-    EVENTS = auto()
-    INPUT = auto()
-    AUDIO = auto()
-    UI = auto()
-
-
 # ---
 # --- Events
 # ---
@@ -64,8 +56,10 @@ class SystemEventEnum(Enum):
     :cvar ENGINE_START:
     :cvar ENGINE_STOP:
     :cvar ENGINE_TICK:
+    :cvar FIXED_TICK:
     """
 
     ENGINE_START = auto()
     ENGINE_STOP = auto()
     ENGINE_TICK = auto()
+    FIXED_TICK = auto()

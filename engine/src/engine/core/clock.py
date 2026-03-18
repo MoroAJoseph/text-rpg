@@ -6,7 +6,14 @@ class Clock:
         self.target_fps = target_fps
         self.frame_duration = 1.0 / target_fps
         self.last_time = time.perf_counter()
-        self.dt = 0.0
+        self.dt = 0.001
+
+    @property
+    def fps(self) -> float:
+        """Returns the instantaneous frames per second."""
+        if self.dt <= 0:
+            return 0.0
+        return 1.0 / self.dt
 
     def tick(self) -> float:
         """Calculates delta time and caps the frame rate."""
