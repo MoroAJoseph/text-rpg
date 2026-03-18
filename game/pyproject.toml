@@ -1,0 +1,13 @@
+[build-system]
+requires      = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "game"
+version = "0.1.0"
+dependencies = [
+    "engine", # editable engine install or future PyPI/Git dependency
+]
+
+[tool.hatch.build.targets.wheel]
+include = ["game*"]
