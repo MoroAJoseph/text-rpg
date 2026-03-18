@@ -1,35 +1,52 @@
-# The Core Kernel
-from .core.kernel import Engine, create_engine
-
-# The Factory & Connection Logic
-from .api.factory import connect
-
-# The Options and Shapes - Pulled from COMMON, not API
-from .common.dataclasses import EngineOptions, EventData, InputEvent
-
-# The Enums
-from .common.enums import (
+# The Public Substrate
+from .core import (
+    Engine,
+    CTX,
+    Context,
+    DomainManager,
+    ConnectionCapability,
+    Clock,
     EventTypeEnum,
     SystemEventEnum,
-    ConnectionCapability,
-    KeyInputEnum,
-    InputStateEnum,
+    EngineOptions,
+    EventData,
 )
 
-# The API Container
-from .api.factory import EngineAPI
+# The Execution Factory
+from .api import create_engine, connect, EngineAPI, EventsAPI, SystemAPI, InputAPI
+
+# The Feature Domains (Expose only what is needed for type hinting or custom drivers)
+from .domains.input import (
+    KeyInputEnum,
+    InputEvent,
+    InputStateEnum,
+    InputEventEnum,
+    BlessedInputDriver,
+)
 
 __all__ = [
+    # Core
     "Engine",
-    "create_engine",
-    "connect",
-    "EngineOptions",
-    "EventData",
-    "InputEvent",
+    "CTX",
+    "Context",
+    "DomainManager",
+    "ConnectionCapability",
+    "Clock",
     "EventTypeEnum",
     "SystemEventEnum",
-    "ConnectionCapability",
-    "KeyInputEnum",
-    "InputStateEnum",
+    "EngineOptions",
+    "EventData",
+    # API
+    "create_engine",
+    "connect",
     "EngineAPI",
+    "EventsAPI",
+    "SystemAPI",
+    "InputAPI",
+    # Input
+    "KeyInputEnum",
+    "InputEvent",
+    "InputStateEnum",
+    "InputEventEnum",
+    "BlessedInputDriver",
 ]

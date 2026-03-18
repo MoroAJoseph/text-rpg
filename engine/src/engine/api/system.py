@@ -1,9 +1,8 @@
 from typing import TYPE_CHECKING
-from ..common.enums import EventTypeEnum, SystemEventEnum
-from ..common.dataclasses import EventData
+from ..core import EventTypeEnum, SystemEventEnum, EventData
 
 if TYPE_CHECKING:
-    from ..core.kernel import Engine
+    from ..core.engine import Engine
 
 
 class SystemAPI:
