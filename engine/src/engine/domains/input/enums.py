@@ -2,54 +2,41 @@ from enum import Enum, auto
 
 
 class KeyInputEnum(Enum):
-    """Identifiers for supported keyboard keys.
-
-    :cvar UP: Arrow UP.
-    :cvar DOWN: Arrow DOWN.
-    :cvar LEFT: Arrow LEFT.
-    :cvar RIGHT: Arrow RIGHT.
-    :cvar ENTER:
-    :cvar BACKSPACE:
-    :cvar ESCAPE:
-    :cvar SPACE:
-    :cvar TAB:
-    :cvar HOME:
-    :cvar END:
-    :cvar PAGE_UP:
-    :cvar PAGE_DOWN:
-    :cvar INSERT:
-    :cvar DELETE:
-    :cvar F1:
-    :cvar F2:
-    :cvar F3:
-    :cvar F4:
-    :cvar F5:
-    :cvar F6:
-    :cvar F7:
-    :cvar F8:
-    :cvar F9:
-    :cvar F10:
-    :cvar F11:
-    :cvar F12:
-    :cvar CHAR:
-    :cvar DEFAULT: Generic fallback for unmapped keys.
-    """
-
+    # --- Navigation ---
     UP = auto()
     DOWN = auto()
     LEFT = auto()
     RIGHT = auto()
+    HOME = auto()
+    END = auto()
+    PAGE_UP = auto()
+    PAGE_DOWN = auto()
+
+    # --- System / Action ---
     ENTER = auto()
     BACKSPACE = auto()
     ESCAPE = auto()
     SPACE = auto()
     TAB = auto()
-    HOME = auto()
-    END = auto()
-    PAGE_UP = auto()
-    PAGE_DOWN = auto()
     INSERT = auto()
     DELETE = auto()
+    PRINT_SCREEN = auto()
+    SCROLL_LOCK = auto()
+    PAUSE = auto()
+
+    # --- Modifiers ---
+    LSHIFT = auto()
+    RSHIFT = auto()
+    LCTRL = auto()
+    RCTRL = auto()
+    LALT = auto()
+    RALT = auto()
+    LSUPER = auto()  # Windows/Command Key
+    RSUPER = auto()
+    CAPS_LOCK = auto()
+    NUM_LOCK = auto()
+
+    # --- Function Keys ---
     F1 = auto()
     F2 = auto()
     F3 = auto()
@@ -62,7 +49,32 @@ class KeyInputEnum(Enum):
     F10 = auto()
     F11 = auto()
     F12 = auto()
-    CHAR = auto()  # For all alpha-numeric characters
+    F13 = auto()
+    F14 = auto()
+    F15 = auto()
+    F16 = auto()
+
+    # --- Generic Alpha-Numeric ---
+    CHAR = auto()  # Any printable character (a-z, 0-9, symbols)
+
+    # --- Numpad ---
+    NUM_0 = auto()
+    NUM_1 = auto()
+    NUM_2 = auto()
+    NUM_3 = auto()
+    NUM_4 = auto()
+    NUM_5 = auto()
+    NUM_6 = auto()
+    NUM_7 = auto()
+    NUM_8 = auto()
+    NUM_9 = auto()
+    NUM_DECIMAL = auto()
+    NUM_DIVIDE = auto()
+    NUM_MULTIPLY = auto()
+    NUM_SUBTRACT = auto()
+    NUM_ADD = auto()
+    NUM_ENTER = auto()
+
     DEFAULT = auto()
 
 
@@ -111,16 +123,18 @@ class InputStateEnum(Enum):
     HELD = auto()
 
 
-class InputEventEnum(Enum):
+class InputEventNameEnum(Enum):
     """Categorization for input-related bus traffic.
 
     :cvar KEYBOARD:
     :cvar MOUSE:
     :cvar SCROLL:
+    :cvar CONTROLLER:
     :cvar TELEMETRY:
     """
 
     KEYBOARD = auto()
     MOUSE = auto()
     SCROLL = auto()
+    CONTROLLER = auto()
     TELEMETRY = auto()

@@ -1,27 +1,18 @@
-from engine import (
-    create_engine,
-    SystemEventEnum,
-    EventData,
-    EventTypeEnum,
-    EngineOptions,
-)
+from dataclasses import asdict
+from engine.config.models import EngineConfig
+from engine.core.enums import EventTypeEnum, SystemEventEnum
+from engine.core.models import EventData
+from engine.kernel.factory import create_engine
 
 
 def test_bus_dispatch_scaling(benchmark):
-    """
-    Measures the cost of routing a single event to a single listener.
-    This isolates the overhead of _get_event_name and dictionary lookups.
-    """
-
-    engine = create_engine()
+    config = asdict(EngineConfig(tick_rate=60))
+    engine = create_engine(config)
     bus = engine.ctx.bus
-
-    # Static data to avoid allocation overhead during the loop
-    event = EventData(type=EventTypeEnum.SYSTEM, name=SystemEventEnum.ENGINE_TICK)
-    bus.subscribe(SystemEventEnum.ENGINE_TICK, lambda e: None)
+    event = EventData(type=EventTypeEnum.SYSTEM, name=SystemEventEnum.MAIN_TICK)
+    bus.subscribe_to_name(SystemEventEnum.MAIN_TICK, lambda e: None)
 
     def dispatch():
-        # Directly populate current queue to skip the swap overhead
         bus._current_queue.append(event)
         bus.process()
 
@@ -29,18 +20,6 @@ def test_bus_dispatch_scaling(benchmark):
 
 
 def test_engine_empty_update_cycle(benchmark):
-    """
-    Measures the baseline cost of engine.update().
-
-    This includes:
-    - Clock ticking and DT calculation.
-    - Bus queue swapping and empty processing.
-    - ManagerRegistry iteration.
-    - Emission of the SystemEventEnum.ENGINE_TICK packet.
-    """
-    # Use a clean engine with no extra managers to find the 'floor'
-    options = EngineOptions(use_input=False)
-    engine = create_engine(options)
-
-    # We benchmark the update call directly
+    config = asdict(EngineConfig(tick_rate=60))
+    engine = create_engine(config)
     benchmark(engine.update)

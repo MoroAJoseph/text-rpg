@@ -320,3 +320,9 @@ Common prefixes:
 - `refactor/`
 - `docs/`
 - `test/`
+
+# Clear all pycache:
+
+```bash
+find . -type d -name "__pycache__" -exec rm -rf {} +
+```

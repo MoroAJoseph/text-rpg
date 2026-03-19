@@ -1,8 +1,8 @@
 # Factory
-from .factory import create_engine, connect
+from .factory import connect
 
-# Dataclasses
-from .dataclasses import APIStack
+# Models
+from .models import APIStack
 
 # APIs
 from .events import EventsAPI
@@ -11,9 +11,8 @@ from .input import InputAPI
 
 __all__ = [
     # Factory
-    "create_engine",
     "connect",
-    # Dataclasses
+    # Models
     "APIStack",
     # APIs
     "EventsAPI",

@@ -1,55 +1,133 @@
-# The Public Substrate
-from .core import (
-    Engine,
-    CTX,
-    Context,
-    DomainManager,
-    Clock,
-    EventTypeEnum,
-    SystemEventEnum,
-    EngineOptions,
-    InputOptions,
-    EventData,
+# API
+from .api import connect, APIStack, EventsAPI, SystemAPI, InputAPI
+
+# Config
+from .config import (
+    # Loader
+    ConfigLoader,
+    # Models
+    CapabilityConfig,
+    KeyboardParameters,
+    MouseParameters,
+    ControllerParameters,
+    InputCapabilities,
+    InputConfig,
+    EngineConfig,
 )
 
-# The Execution Factory
-from .api import create_engine, connect, APIStack, EventsAPI, SystemAPI, InputAPI
+# Core
+from .core import (
+    # Domain Base
+    DomainDriver,
+    DomainManager,
+    # Infrastructure
+    Clock,
+    Logger,
+    EventBus,
+    # Enums
+    EventTypeEnum,
+    SystemEventEnum,
+    ExitCodeEnum,
+    # Models
+    EventData,
+    SystemEvent,
+    TickBucket,
+)
 
-# The Feature Domains (Expose only what is needed for type hinting or custom drivers)
+# Kernel
+from .kernel import Context, CTX, Engine, ManagerRegistry, create_engine
+
+# Input Domain
 from .domains.input import (
-    KeyInputEnum,
+    # Models
+    InputPayload,
+    InputSpoke,
     InputEvent,
+    InputMetrics,
+    InputTelemetryPayload,
+    InputTelemetryEvent,
+    InputIdentifier,
+    # Enums
+    KeyInputEnum,
+    MouseInputEnum,
+    ScrollInputEnum,
     InputStateEnum,
-    InputEventEnum,
+    InputEventNameEnum,
+    # Core
     InputManager,
+    InputProvider,
+    InputTelemetry,
+    # Drivers
+    InputDriver,
+    DefaultInputDriver,
     BlessedInputDriver,
 )
 
 __all__ = [
-    # Core
-    "Engine",
-    "CTX",
-    "Context",
-    "DomainManager",
-    "Clock",
-    "EventTypeEnum",
-    "SystemEventEnum",
-    "EngineOptions",
-    "InputOptions",
-    "EventData",
-    # API
-    "create_engine",
+    # --- API ---
     "connect",
     "APIStack",
     "EventsAPI",
     "SystemAPI",
     "InputAPI",
-    # Input
-    "KeyInputEnum",
+    # --- Config ---
+    # Loader
+    "ConfigLoader",
+    # Models
+    "CapabilityConfig",
+    "KeyboardParameters",
+    "MouseParameters",
+    "ControllerParameters",
+    "InputCapabilities",
+    "InputConfig",
+    "EngineConfig",
+    # --- Core ---
+    # Domain Bases
+    "DomainManager",
+    "DomainDriver",
+    # Infrastructure
+    "Clock",
+    "Logger",
+    "EventBus",
+    # Enums
+    "EventTypeEnum",
+    "SystemEventEnum",
+    "ExitCodeEnum",
+    # Models
+    "EventData",
+    "SystemEvent",
+    "TickBucket",
+    # --- Kernel ---
+    # Context
+    "Context",
+    "CTX",
+    # Engine
+    "Engine",
+    # Registry
+    "ManagerRegistry",
+    # Factory
+    "create_engine",
+    # --- Domain: Input ---
+    # Models
+    "InputPayload",
+    "InputSpoke",
     "InputEvent",
+    "InputMetrics",
+    "InputTelemetryPayload",
+    "InputTelemetryEvent",
+    "InputIdentifier",
+    # Enums
+    "KeyInputEnum",
+    "MouseInputEnum",
+    "ScrollInputEnum",
     "InputStateEnum",
-    "InputEventEnum",
+    "InputEventNameEnum",
+    # Core
     "InputManager",
-    "InputOptions",
+    "InputProvider",
+    "InputTelemetry",
+    # Drivers
+    "InputDriver",
+    "DefaultInputDriver",
     "BlessedInputDriver",
 ]

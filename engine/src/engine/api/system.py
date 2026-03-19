@@ -2,29 +2,21 @@ from typing import TYPE_CHECKING
 from ..core import EventTypeEnum, SystemEventEnum, EventData
 
 if TYPE_CHECKING:
-    from ..core.engine import Engine
+    from ..kernel import Engine
 
 
 class SystemAPI:
-    """Controls engine lifecycle via intent-based events."""
+    """Lifecycle control and logging."""
 
     def __init__(self, engine: "Engine"):
         self._bus = engine.ctx.bus
-        self.log = engine.log
+        self._log = engine.ctx.log
 
-    def start(self):
-        self.log.info("API: System Start requested.")
-        self._bus.emit(
-            EventData(type=EventTypeEnum.SYSTEM, name=SystemEventEnum.ENGINE_START)
-        )
+    def stop(self):
+        """Request engine shutdown."""
+        self._bus.emit(EventData(type=EventTypeEnum.SYSTEM, name=SystemEventEnum.STOP))
 
-    def shutdown(self):
-        self.log.info("API: System Shutdown requested.")
-        self._bus.emit(
-            EventData(type=EventTypeEnum.SYSTEM, name=SystemEventEnum.ENGINE_STOP)
-        )
-
-    def tick(self):
-        self._bus.emit(
-            EventData(type=EventTypeEnum.SYSTEM, name=SystemEventEnum.ENGINE_TICK)
-        )
+    def log(self, message: str, level: str = "info"):
+        """Proxy to kernel logger."""
+        method = getattr(self._log, level.lower(), self._log.info)
+        method(message)

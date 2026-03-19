@@ -1,24 +1,20 @@
 from unittest.mock import MagicMock
-
-from engine import InputStateEnum, KeyInputEnum
-from engine.api import InputAPI
-
-
-def test_api_handles_missing_manager():
-    mock_engine = MagicMock()
-    mock_engine.get_manager.return_value = None
-
-    api = InputAPI(mock_engine)
-    assert api.is_pressed(KeyInputEnum.UP) is False
-    assert api.get_metrics() is None
+from engine.api.input import InputAPI
+from engine.domains.input.enums import KeyInputEnum, InputStateEnum
 
 
-def test_api_checks_manager_state():
-    mock_engine = MagicMock()
+def test_input_api_is_down():
     mock_manager = MagicMock()
-    mock_manager._key_states = {KeyInputEnum.UP: InputStateEnum.PRESSED}
-    mock_engine.get_manager.return_value = mock_manager
+    # Mock internal dict state
+    mock_manager._key_states = {KeyInputEnum.SPACE: InputStateEnum.HELD}
 
-    api = InputAPI(mock_engine)
-    assert api.is_pressed(KeyInputEnum.UP) is True
-    assert api.is_pressed(KeyInputEnum.DOWN) is False
+    api = InputAPI(mock_manager)
+    assert api.is_down(KeyInputEnum.SPACE) is True
+    assert api.is_down(KeyInputEnum.ESCAPE) is False
+
+
+def test_input_api_metrics_null_safety():
+    mock_manager = MagicMock()
+    mock_manager.telemetry = None
+    api = InputAPI(mock_manager)
+    assert api.get_metrics() is None

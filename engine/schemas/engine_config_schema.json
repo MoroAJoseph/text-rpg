@@ -1,0 +1,290 @@
+{
+    "$defs": {
+        "CapabilityConfig_ControllerParameters_": {
+            "properties": {
+                "parameters": {
+                    "$ref": "#/$defs/ControllerParameters"
+                },
+                "driver": {
+                    "default": "default",
+                    "title": "Driver",
+                    "type": "string"
+                },
+                "enabled": {
+                    "default": true,
+                    "title": "Enabled",
+                    "type": "boolean"
+                },
+                "poll_rate": {
+                    "anyOf": [
+                        {
+                            "type": "number"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "title": "Poll Rate"
+                },
+                "log_level": {
+                    "default": "WARNING",
+                    "enum": [
+                        "TRACE",
+                        "DEBUG",
+                        "INFO",
+                        "WARNING",
+                        "ERROR"
+                    ],
+                    "title": "Log Level",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "parameters"
+            ],
+            "title": "CapabilityConfig",
+            "type": "object"
+        },
+        "CapabilityConfig_KeyboardParameters_": {
+            "properties": {
+                "parameters": {
+                    "$ref": "#/$defs/KeyboardParameters"
+                },
+                "driver": {
+                    "default": "default",
+                    "title": "Driver",
+                    "type": "string"
+                },
+                "enabled": {
+                    "default": true,
+                    "title": "Enabled",
+                    "type": "boolean"
+                },
+                "poll_rate": {
+                    "anyOf": [
+                        {
+                            "type": "number"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "title": "Poll Rate"
+                },
+                "log_level": {
+                    "default": "WARNING",
+                    "enum": [
+                        "TRACE",
+                        "DEBUG",
+                        "INFO",
+                        "WARNING",
+                        "ERROR"
+                    ],
+                    "title": "Log Level",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "parameters"
+            ],
+            "title": "CapabilityConfig",
+            "type": "object"
+        },
+        "CapabilityConfig_MouseParameters_": {
+            "properties": {
+                "parameters": {
+                    "$ref": "#/$defs/MouseParameters"
+                },
+                "driver": {
+                    "default": "default",
+                    "title": "Driver",
+                    "type": "string"
+                },
+                "enabled": {
+                    "default": true,
+                    "title": "Enabled",
+                    "type": "boolean"
+                },
+                "poll_rate": {
+                    "anyOf": [
+                        {
+                            "type": "number"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "title": "Poll Rate"
+                },
+                "log_level": {
+                    "default": "WARNING",
+                    "enum": [
+                        "TRACE",
+                        "DEBUG",
+                        "INFO",
+                        "WARNING",
+                        "ERROR"
+                    ],
+                    "title": "Log Level",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "parameters"
+            ],
+            "title": "CapabilityConfig",
+            "type": "object"
+        },
+        "ControllerParameters": {
+            "properties": {
+                "device_index": {
+                    "default": 0,
+                    "title": "Device Index",
+                    "type": "integer"
+                },
+                "deadzone": {
+                    "default": 0.1,
+                    "title": "Deadzone",
+                    "type": "number"
+                },
+                "rumble_enabled": {
+                    "default": false,
+                    "title": "Rumble Enabled",
+                    "type": "boolean"
+                }
+            },
+            "title": "ControllerParameters",
+            "type": "object"
+        },
+        "InputCapabilities": {
+            "properties": {
+                "keyboard": {
+                    "$ref": "#/$defs/CapabilityConfig_KeyboardParameters_"
+                },
+                "mouse": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/CapabilityConfig_MouseParameters_"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                },
+                "controller": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/CapabilityConfig_ControllerParameters_"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                }
+            },
+            "title": "InputCapabilities",
+            "type": "object"
+        },
+        "InputConfig": {
+            "properties": {
+                "enabled": {
+                    "default": true,
+                    "title": "Enabled",
+                    "type": "boolean"
+                },
+                "default_poll_rate": {
+                    "default": 60.0,
+                    "title": "Default Poll Rate",
+                    "type": "number"
+                },
+                "decay_threshold": {
+                    "default": 0.12,
+                    "title": "Decay Threshold",
+                    "type": "number"
+                },
+                "capabilities": {
+                    "$ref": "#/$defs/InputCapabilities"
+                }
+            },
+            "title": "InputConfig",
+            "type": "object"
+        },
+        "KeyboardParameters": {
+            "properties": {
+                "raw_mode": {
+                    "default": true,
+                    "title": "Raw Mode",
+                    "type": "boolean"
+                },
+                "intercept_signals": {
+                    "default": true,
+                    "title": "Intercept Signals",
+                    "type": "boolean"
+                },
+                "encoding": {
+                    "default": "utf-8",
+                    "title": "Encoding",
+                    "type": "string"
+                }
+            },
+            "title": "KeyboardParameters",
+            "type": "object"
+        },
+        "MouseParameters": {
+            "properties": {
+                "tracking": {
+                    "default": "sgr",
+                    "enum": [
+                        "sgr",
+                        "x11",
+                        "urxvt"
+                    ],
+                    "title": "Tracking",
+                    "type": "string"
+                },
+                "report_release": {
+                    "default": true,
+                    "title": "Report Release",
+                    "type": "boolean"
+                }
+            },
+            "title": "MouseParameters",
+            "type": "object"
+        }
+    },
+    "properties": {
+        "tick_rate": {
+            "default": 60,
+            "title": "Tick Rate",
+            "type": "integer"
+        },
+        "log_level": {
+            "default": "INFO",
+            "enum": [
+                "TRACE",
+                "DEBUG",
+                "INFO",
+                "WARNING",
+                "ERROR"
+            ],
+            "title": "Log Level",
+            "type": "string"
+        },
+        "rates": {
+            "additionalProperties": {
+                "type": "number"
+            },
+            "title": "Rates",
+            "type": "object"
+        },
+        "input": {
+            "$ref": "#/$defs/InputConfig"
+        }
+    },
+    "title": "Blackbox Engine Configuration",
+    "type": "object",
+    "description": "Schema for validating engine.toml and engine.json"
+}

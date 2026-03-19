@@ -1,26 +1,16 @@
-import pytest
-from engine import (
-    create_engine,
-    EngineOptions,
-    SystemEventEnum,
-)
-from engine.api import SystemAPI
+from unittest.mock import MagicMock
+from engine.api.system import SystemAPI
+from engine.core.enums import EventTypeEnum, SystemEventEnum
 
 
-@pytest.fixture
-def engine():
-    return create_engine(EngineOptions())
-
-
-def test_system_api_emits_start(engine):
+def test_system_api_stop_emits_event():
+    engine = MagicMock()
     api = SystemAPI(engine)
-    api.start()
 
-    # Peek into the bus queue
-    events = list(engine.ctx.bus._next_queue)
+    api.stop()
 
-    # Verify ENGINE_START exists in the queue
-    start_event = next(
-        (e for e in events if e.name == SystemEventEnum.ENGINE_START), None
-    )
-    assert start_event is not None
+    # Verify the correct event was emitted to the bus
+    args, _ = engine.ctx.bus.emit.call_args
+    event = args[0]
+    assert event.type == EventTypeEnum.SYSTEM
+    assert event.name == SystemEventEnum.STOP

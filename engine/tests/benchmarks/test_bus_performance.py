@@ -1,22 +1,23 @@
 import pytest
-from engine import create_engine, EventData, EventTypeEnum, SystemEventEnum
+from dataclasses import asdict
+from engine.config.models import EngineConfig
+from engine.core.models import EventData
+from engine.core.enums import EventTypeEnum, SystemEventEnum
+from engine.kernel.factory import create_engine
 
 
-def test_bus_throughput(benchmark):
-    engine = create_engine()
+@pytest.mark.parametrize("count", [100, 1000, 100000])
+def test_bus_throughput(benchmark, count):
+    config = asdict(EngineConfig(tick_rate=60))
+    engine = create_engine(config)
     bus = engine.ctx.bus
-
-    # Pre-subscribe to eliminate lookup overhead from the measurement
-    bus.subscribe(SystemEventEnum.ENGINE_TICK, lambda e: None)
+    bus.subscribe_to_name(SystemEventEnum.MAIN_TICK, lambda e: None)
 
     def emit_and_process():
-        # Emit 100 events
-        for _ in range(100):
+        for _ in range(count):
             bus.emit(
-                EventData(type=EventTypeEnum.SYSTEM, name=SystemEventEnum.ENGINE_TICK)
+                EventData(type=EventTypeEnum.SYSTEM, name=SystemEventEnum.MAIN_TICK)
             )
-        # Process the batch
         bus.process()
 
-    # The benchmark will run this thousands of times to get an average
     benchmark(emit_and_process)

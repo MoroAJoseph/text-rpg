@@ -38,28 +38,24 @@ class ExitCodeEnum(Enum):
 class EventTypeEnum(Enum):
     """Broad categories for the Event Bus to route.
 
-    :cvar SYSTEM: OS-level or application-wide signals.
-    :cvar INPUT: Raw hardware input data.
-    :cvar UI: UI navigation, rendering, and menu triggers.
-    :cvar AUDIO:
+    :cvar SYSTEM:
+    :cvar INPUT:
     """
 
     SYSTEM = auto()
     INPUT = auto()
-    UI = auto()
-    AUDIO = auto()
 
 
 class SystemEventEnum(Enum):
     """System Event Names for the Event Bus to route.
 
-    :cvar ENGINE_START:
-    :cvar ENGINE_STOP:
-    :cvar ENGINE_TICK:
-    :cvar FIXED_TICK:
+    :cvar START:
+    :cvar STOP:
+    :cvar MAIN_TICK:
+    :cvar CUSTOM_TICK:
     """
 
-    ENGINE_START = auto()
-    ENGINE_STOP = auto()
-    ENGINE_TICK = auto()
-    FIXED_TICK = auto()
+    START = auto()
+    STOP = auto()
+    MAIN_TICK = auto()
+    CUSTOM_TICK = auto()

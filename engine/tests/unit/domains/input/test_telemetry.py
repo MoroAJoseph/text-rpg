@@ -1,21 +1,16 @@
+import time
 from unittest.mock import MagicMock
+from engine.domains.input.telemetry import InputTelemetry
 
-from engine.domains.input import InputTelemetry
 
-
-def test_telemetry_accumulation():
+def test_telemetry_reporting_interval():
     bus = MagicMock()
-    telemetry = InputTelemetry(bus)
+    # Set a very short interval for testing
+    telemetry = InputTelemetry(bus, report_interval=0.01)
 
-    telemetry.record_poll(0.0, 5)  # Processed 5 events
-    telemetry.record_poll(0.0, 3)  # Processed 3 events
+    telemetry.record_poll(time.perf_counter(), 5)
+    time.sleep(0.02)
+    telemetry.record_poll(time.perf_counter(), 2)
 
-    assert telemetry.metrics.total_events_processed == 8
-
-
-def test_telemetry_state_update():
-    bus = MagicMock()
-    telemetry = InputTelemetry(bus)
-
-    telemetry.update_state(12)
-    assert telemetry.metrics.active_keys_count == 12
+    # Should have emitted a TelemetryEvent once
+    assert bus.emit.called

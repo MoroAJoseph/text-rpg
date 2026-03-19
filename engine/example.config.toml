@@ -1,0 +1,23 @@
+#:schema ./schemas/engine_config_schema.json
+
+tick_rate = 144
+log_level = "INFO"
+
+[input]
+default_poll_rate = 60
+decay_threshold   = 0.12
+
+[input.capabilities.keyboard]
+driver     = "default"
+poll_rate  = 60
+log_level  = "DEBUG"
+parameters = { raw_mode = true, intercept_signals = true }
+
+[input.capabilities.mouse]
+driver     = "blessed"
+poll_rate  = 30
+parameters = { tracking = "sgr" }
+
+[input.capabilities.controller]
+driver     = "pygame"
+parameters = { deadzone = 0.1, device_index = 0 }

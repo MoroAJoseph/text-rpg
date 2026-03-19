@@ -1,52 +1,67 @@
 import pytest
-from engine import (
-    InputEvent,
-    InputStateEnum,
-    KeyInputEnum,
-)
-from engine.domains.input import InputManager
-from engine.core import EngineEventBus
+from unittest.mock import MagicMock
+from engine.domains.input.manager import InputManager
+from engine.domains.input.models import InputPayload
+from engine.domains.input.enums import KeyInputEnum, InputStateEnum, InputEventNameEnum
+from engine.config.models import InputConfig
+from engine.core.bus import EventBus
 
 
 @pytest.fixture
 def manager():
-    return InputManager(bus=EngineEventBus())
+    config = InputConfig(decay_threshold=0.1)
+    m = InputManager(config)
+    m.register_bus(EventBus())
+    return m
 
 
-def test_manager_initial_state(manager):
-    assert len(manager._key_states) == 0
-    assert len(manager._providers) == 0
+def test_promotion_pressed_to_held(manager):
+    payload = InputPayload(
+        identifier=KeyInputEnum.SPACE,
+        state=InputStateEnum.PRESSED,
+        timestamp=1.0,
+        raw_data=" ",
+    )
+
+    # First press
+    manager._process_input(payload)
+    assert manager._key_states[KeyInputEnum.SPACE] == InputStateEnum.PRESSED
+
+    # Second press (same key) -> Promotion to HELD
+    manager._process_input(payload)
+    assert manager._key_states[KeyInputEnum.SPACE] == InputStateEnum.HELD
 
 
-def test_process_input_updates_state(manager):
-    event = InputEvent(KeyInputEnum.UP, InputStateEnum.PRESSED, 100.0)
-    manager._process_input(event)
-
-    assert manager._key_states[KeyInputEnum.UP] == InputStateEnum.PRESSED
-
-
-def test_duplicate_input_ignored(manager):
-    event = InputEvent(KeyInputEnum.UP, InputStateEnum.PRESSED, 100.0)
-    manager._process_input(event)
-
-    # Manually clear the bus to see if a second event triggers a new emission
-    manager._bus._next_queue.clear()
-    manager._process_input(event)
-
-    assert len(manager._bus._next_queue) == 0
-
-
-def test_handle_key_decay_logic(manager):
-    # Setup a pressed key
-    key = KeyInputEnum.SPACE
+def test_key_decay_to_released(manager):
+    key = KeyInputEnum.ENTER
     manager._key_states[key] = InputStateEnum.PRESSED
     manager._key_timers[key] = 0.0
 
-    # Update with dt below threshold (0.12)
-    manager._handle_key_decay(0.05)
-    assert manager._key_states[key] == InputStateEnum.PRESSED
+    # Step time forward by 0.11 (threshold is 0.1)
+    manager._handle_key_decay(0.11)
 
-    # Update to cross threshold
-    manager._handle_key_decay(0.08)
     assert manager._key_states[key] == InputStateEnum.RELEASED
-    assert key not in manager._key_timers
+    assert key not in manager._key_timers  # Cleanup check
+
+
+def test_spoke_polling_logic(manager):
+    mock_driver = MagicMock()
+
+    # Use keywords to ensure 'a' goes to raw_data, not coords
+    mock_driver.poll.return_value = [
+        InputPayload(
+            identifier=KeyInputEnum.CHAR,
+            state=InputStateEnum.PRESSED,
+            timestamp=1.0,
+            raw_data="a",
+        )
+    ]
+
+    # Add spoke at 60Hz
+    manager.add_spoke("test_kb", mock_driver, 60.0)
+
+    # Update manager with enough dt (0.02s) to exceed 60Hz interval (~0.016s)
+    manager.update(0.02)
+
+    assert manager._key_states[KeyInputEnum.CHAR] == InputStateEnum.PRESSED
+    mock_driver.poll.assert_called_once()

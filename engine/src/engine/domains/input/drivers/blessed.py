@@ -1,20 +1,13 @@
+from typing import List, Dict, Optional
 import time
-from typing import List, Dict
 from blessed import Terminal
 from blessed.keyboard import Keystroke
+from ..enums import InputStateEnum, KeyInputEnum, MouseInputEnum, ScrollInputEnum
+from ..models import InputPayload
+from .base import InputDriver
 
-from engine.core import DomainDriver
-from ..dataclasses import InputEvent
-from ..enums import InputStateEnum, KeyInputEnum, ScrollInputEnum
 
-
-class BlessedInputDriver(DomainDriver):
-    """
-    Blessed-specific implementation of DomainDriver.
-    Maps terminal sequences to normalized Engine identifiers.
-    """
-
-    # Mapping Blessed's named keys to internal Enums
+class BlessedInputDriver(InputDriver):
     KEY_MAP: Dict[str, KeyInputEnum] = {
         "KEY_UP": KeyInputEnum.UP,
         "KEY_DOWN": KeyInputEnum.DOWN,
@@ -35,69 +28,72 @@ class BlessedInputDriver(DomainDriver):
         "\r": KeyInputEnum.ENTER,
     }
 
-    # Add F-Keys dynamically
-    for i in range(1, 13):
-        KEY_MAP[f"KEY_F{i}"] = getattr(KeyInputEnum, f"F{i}")
+    def __init__(self, terminal: Optional[Terminal] = None, **kwargs):
+        """
+        Initialize with optional terminal and catch configuration parameters.
+        **kwargs handles: raw_mode, intercept_signals, encoding, etc.
+        """
+        self.term = terminal or Terminal()
+        self.params = kwargs
 
-    def __init__(self, terminal: Terminal):
-        self.term = terminal
+    def poll(self) -> List[InputPayload]:
+        # Blessed inkey(0) can return None, a str, or a Keystroke
+        key = self.term.inkey(timeout=0)
+        if not key or key == "":
+            return []
 
-    def poll(self) -> List[InputEvent]:
-        events: List[InputEvent] = []
-        key: Keystroke = self.term.inkey(timeout=0)
-        now: float = time.time()
+        # SAFE CHECK: Use getattr or check for 'name' attribute
+        name = getattr(key, "name", None)
 
-        if not key:
-            return events
+        if name == "KEY_MOUSE":
+            return [self._handle_mouse(key)]
 
-        # 1. Handle Mouse/Scroll decoding
-        if key.is_sequence and key.name == "KEY_MOUSE":
-            # Blessed mouse events are decoded into: [button_code, x, y]
-            # Scroll Up is usually button 4 (code 64 or 4)
-            # Scroll Down is usually button 5 (code 65 or 5)
-            # The 'code' attribute in Blessed for mouse sequences often maps:
-            # 64 = Scroll Up, 65 = Scroll Down
+        return [self._handle_keyboard(key)]
 
-            if key.code == 64:
-                events.append(
-                    InputEvent(
-                        identifier=ScrollInputEnum.UP,
-                        state=InputStateEnum.PRESSED,
-                        timestamp=now,
-                        raw_data="scroll",
-                    )
-                )
-            elif key.code == 65:
-                events.append(
-                    InputEvent(
-                        identifier=ScrollInputEnum.DOWN,
-                        state=InputStateEnum.PRESSED,
-                        timestamp=now,
-                        raw_data="scroll",
-                    )
-                )
-            return events
-
-        # 2. Standard Keyboard Logic
-        name = key.name if key.name else str(key)
+    def _handle_keyboard(self, key) -> InputPayload:
+        # Determine if it's a special sequence or a raw character
+        is_seq = getattr(key, "is_sequence", False)
+        name = getattr(key, "name", str(key)) if is_seq else str(key)
 
         if name in self.KEY_MAP:
-            mapped_id = self.KEY_MAP[name]
+            identifier = self.KEY_MAP[name]
         elif len(str(key)) == 1:
-            mapped_id = KeyInputEnum.CHAR
+            identifier = KeyInputEnum.CHAR
         else:
-            mapped_id = KeyInputEnum.DEFAULT
+            identifier = KeyInputEnum.DEFAULT
 
-        events.append(
-            InputEvent(
-                identifier=mapped_id,
-                state=InputStateEnum.PRESSED,
-                timestamp=now,
-                raw_data=str(key),
-            )
+        return InputPayload(
+            identifier=identifier,
+            state=InputStateEnum.PRESSED,
+            timestamp=time.time(),
+            raw_data=str(key),
+            coords=(0, 0),
         )
-        return events
 
-    def shutdown(self) -> None:
-        """Satisfies DomainDriver protocol. Cleanup is handled by Blessed's context."""
-        pass
+    def _handle_mouse(self, key: Keystroke) -> InputPayload:
+        button = getattr(key, "button", -1)
+        coords = (getattr(key, "x", 0), getattr(key, "y", 0))
+
+        # Handle Scroll (Blessed codes for scroll are usually in the button/code mix)
+        # Note: Some terminals report scroll as 64/65 in button or code
+        code = getattr(key, "code", -1)
+        if code == 64 or button == 64:
+            identifier = ScrollInputEnum.UP
+        elif code == 65 or button == 65:
+            identifier = ScrollInputEnum.DOWN
+        else:
+            # Standard Buttons: 0: Left, 1: Middle, 2: Right
+            btn_map = {
+                0: MouseInputEnum.LEFT,
+                1: MouseInputEnum.MIDDLE,
+                2: MouseInputEnum.RIGHT,
+            }
+            identifier = btn_map.get(button, MouseInputEnum.DEFAULT)
+
+        return InputPayload(
+            identifier=identifier,
+            state=InputStateEnum.PRESSED,
+            timestamp=time.time(),
+            raw_data="mouse",
+            coords=coords,
+        )

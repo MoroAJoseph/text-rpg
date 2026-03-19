@@ -3,20 +3,19 @@ requires      = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "engine"
-version = "0.1.0"
-description = "Core kernel for event-driven systems"
-readme = "README.md"
-requires-python = ">=3.10"
-dependencies = [
-    "blessed==1.33.0",
-    "python-dotenv==1.2.2",
-    "PyYAML==6.0.3",
-    "wcwidth==0.6.0",
-]
+name            = "engine"
+version         = "0.1.0"
+description     = "Core kernel for event-driven systems"
+readme          = "README.md"
+requires-python = ">=3.12.3"
+dependencies    = ["blessed==1.33.0", "python-dotenv==1.2.2", "wcwidth==0.6.0"]
 
 [project.optional-dependencies]
+# For running engine tests and benchmarks
 test = ["pytest==9.0.2", "pytest-mock==3.15.1", "pytest-benchmark==5.2.3"]
+
+# For generating JSON schemas and advanced IDE support
+dev = ["pydantic==2.10.6", "mypy==1.15.0", "ruff==0.9.6"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/engine"]

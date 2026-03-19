@@ -1,26 +1,31 @@
 import time
-from engine import create_engine, EngineOptions
-from engine.domains.input import InputEvent, InputStateEnum, KeyInputEnum, InputManager
+from dataclasses import asdict
+from engine.config.models import EngineConfig, InputConfig
+from engine.domains.input.enums import InputStateEnum, KeyInputEnum
+from engine.domains.input.manager import InputManager
+from engine.domains.input.models import InputPayload
+from engine.kernel.factory import create_engine
 
 
 def test_input_normalization_overhead(benchmark):
-    engine = create_engine(EngineOptions(use_input=True))
+    config_obj = EngineConfig(input=InputConfig(enabled=True))
+    config = asdict(config_obj)
+    engine = create_engine(config)
 
-    # Pass the expected type to satisfy Pylance and the runtime check
-    input_manager = engine.get_manager("input", InputManager)
-
-    if input_manager is None:
+    input_manager = engine.managers.get("input", InputManager)
+    if not input_manager:
         raise RuntimeError("InputManager not found")
 
-    raw_event = InputEvent(
+    payload = InputPayload(
         identifier=KeyInputEnum.SPACE,
         state=InputStateEnum.PRESSED,
         timestamp=time.time(),
+        raw_data=" ",
+        coords=(0, 0),
     )
 
     def normalize_and_emit():
-        input_manager._process_input(raw_event)
-        # Prevent queue bloat during benchmarking
+        input_manager._process_input(payload)
         engine.ctx.bus._next_queue.clear()
 
     benchmark(normalize_and_emit)

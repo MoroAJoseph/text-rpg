@@ -1,0 +1,44 @@
+{
+	"tick_rate": 144,
+	"log_level": "INFO",
+	"rates": {},
+	"input": {
+		"enabled": true,
+		"default_poll_rate": 60.0,
+		"decay_threshold": 0.12,
+		"capabilities": {
+			"keyboard": {
+				"driver": "default",
+				"enabled": true,
+				"poll_rate": 60.0,
+				"log_level": "DEBUG",
+				"parameters": {
+					"raw_mode": true,
+					"intercept_signals": true,
+					"encoding": "utf-8"
+				}
+			},
+			"mouse": {
+				"driver": "blessed",
+				"enabled": true,
+				"poll_rate": 30.0,
+				"log_level": "WARNING",
+				"parameters": {
+					"tracking": "sgr",
+					"report_release": true
+				}
+			},
+			"controller": {
+				"driver": "pygame",
+				"enabled": true,
+				"poll_rate": null,
+				"log_level": "WARNING",
+				"parameters": {
+					"device_index": 0,
+					"deadzone": 0.1,
+					"rumble_enabled": false
+				}
+			}
+		}
+	}
+}

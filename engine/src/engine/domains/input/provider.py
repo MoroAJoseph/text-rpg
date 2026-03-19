@@ -1,6 +1,6 @@
 from typing import List, Protocol
 
-from .dataclasses import InputEvent
+from .models import InputEvent
 
 
 class InputProvider(Protocol):

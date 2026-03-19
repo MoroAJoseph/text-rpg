@@ -1,77 +1,132 @@
+import sys
+import select
+import os
 import contextlib
-
+from typing import cast  # Use typing, NOT ctypes
 from blessed import Terminal
 from engine import (
     create_engine,
     connect,
     EventTypeEnum,
-    EngineOptions,
-    InputOptions,
-    SystemEventEnum,
     KeyInputEnum,
+    InputEventNameEnum,
+    SystemEventEnum,
 )
+from engine.domains.input.drivers.default import DefaultInputDriver
+from engine.domains.input.manager import InputManager
 
 term = Terminal()
-options = EngineOptions(input=InputOptions().use_terminal(term))
-engine = create_engine(options)
-api = connect(engine)
 
+config_data = {
+    "engine": {"tick_rate": 60, "log_level": "INFO", "rates": {}},
+    "features": {
+        "input": {
+            "enabled": True,
+            "default_poll_rate": 60.0,
+            "decay_threshold": 0.12,
+            "capabilities": {
+                "keyboard": {
+                    "driver": "default",
+                    "enabled": True,
+                    "parameters": {"raw_mode": True},
+                },
+                "mouse": {
+                    "driver": "default",
+                    "enabled": True,
+                    "parameters": {"tracking": "sgr"},
+                },
+            },
+        }
+    },
+}
+
+engine = create_engine(config_data)
+api = connect(engine)
 input_history = []
 
+# --- Buffer Feeding Logic ---
 
-def render_diagnostic():
-    # Use term.home to move cursor to (0,0) and term.clear to wipe the screen
-    # Wrapping it in a single print call reduces flicker
-    output = [
-        term.home + term.clear,
-        "--- ENGINE INPUT DIAGNOSTIC ---",
-        f"Status: Polling @ {engine.clock.fps:.1f} FPS",  # Accesses the @property
-        "Instructions: Press keys. Only one event per action.",
-        "-" * 45,
-    ]
+
+def feed_input_driver(_):
+    manager_instance = engine.managers.get("input", InputManager)
+    manager = cast(InputManager, manager_instance)
+
+    if not manager:
+        return
+
+    for spoke in manager._spokes:
+        if isinstance(spoke.driver, DefaultInputDriver):
+            # Check if file descriptor 0 (stdin) has data waiting
+            if select.select([sys.stdin], [], [], 0)[0]:
+                try:
+                    # os.read(0, size) is non-blocking on most Unix-like systems
+                    # when used after select. grab up to 4kb of sequences.
+                    raw_bytes = os.read(sys.stdin.fileno(), 4096)
+                    if raw_bytes:
+                        # Decode and push the whole chunk to the driver buffer
+                        chunk = raw_bytes.decode(errors="ignore")
+                        spoke.driver._buffer.append(chunk)
+                except OSError:
+                    pass
+
+
+# --- Diagnostic Rendering ---
+
+
+def render_ui():
+    print(term.home + term.clear)
+    print(term.bold_white_on_blue(" --- ENGINE INPUT DIAGNOSTIC --- "))
+    print(
+        f"Stack Size: {len(input_history)}/15 | Tick Rate: {engine.clock.tick_rate:.1f}Hz"
+    )
+    print("-" * 60)
 
     if not input_history:
-        output.append("Waiting for input...")
+        print(term.italic("Waiting for hardware input... (Type or Click)"))
     else:
         for i, event in enumerate(reversed(input_history)):
-            display_name = event.name
+            payload = event.data
+            display_name = payload.identifier
 
-            # Handle the CHAR metadata correctly
-            if event.name == KeyInputEnum.CHAR:
-                char_val = event.data.raw_data
-                display_name = f"CHAR('{char_val}')"
+            if payload.identifier == KeyInputEnum.CHAR:
+                display_name = f"CHAR('{payload.raw_data}')"
 
-            # Use fixed-width formatting for the ID to prevent layout shifting
-            line = f"[{i}] ID: {str(display_name):<25} | STATE: {event.data.state.name}"
-            output.append(line)
-
-    # Join and print once to avoid terminal 'stutter'
-    print("\n".join(output))
+            coord_info = f" @ {payload.coords}" if payload.coords != (0, 0) else ""
+            print(
+                f"[{i:02}] ID: {str(display_name):<22} | "
+                f"STATE: {payload.state.name:<10} | "
+                f"RAW: {repr(payload.raw_data)}{coord_info}"
+            )
 
 
 def on_input(event):
+    if event.name == InputEventNameEnum.TELEMETRY:
+        return
     input_history.append(event)
-    if len(input_history) > 15:  # Keep a bit more history
+    if len(input_history) > 15:
         input_history.pop(0)
+    render_ui()
 
 
-def on_engine_tick(_):
-    render_diagnostic()
-
+# --- Subscriptions ---
 
 api.events.on_type(EventTypeEnum.INPUT, on_input)
-api.events.on(SystemEventEnum.ENGINE_TICK, on_engine_tick)
+api.events.on(SystemEventEnum.MAIN_TICK, feed_input_driver)
 
 
 @contextlib.contextmanager
-def mouse_handler(terminal):
-    print(terminal.enter_mouse, end="", flush=True)
-    try:
+def terminal_lifecycle(terminal):
+    with terminal.fullscreen(), terminal.cbreak(), terminal.hidden_cursor():
+        # Clear screen and enable mouse tracking
+        print(terminal.home + terminal.clear + terminal.enter_mouse, end="", flush=True)
         yield
-    finally:
         print(terminal.exit_mouse, end="", flush=True)
 
 
-# Usage in your script
-with term.fullscreen(), term.cbreak(), term.hidden_cursor(), mouse_handler(term):
-    engine.run()
+if __name__ == "__main__":
+    with terminal_lifecycle(term):
+        render_ui()
+        try:
+            engine.run()
+        except KeyboardInterrupt:
+            pass

@@ -2,16 +2,16 @@ from ..domains.input import InputManager, InputStateEnum, KeyInputEnum
 
 
 class InputAPI:
-    def __init__(self, manager: InputManager):
-        self._manager: InputManager = manager
+    """High-level queries for input state and telemetry."""
 
-    def is_pressed(self, key: KeyInputEnum) -> bool:
-        """Instant check for key state."""
-        if not self._manager:
-            return False
+    def __init__(self, manager: InputManager):
+        self._manager = manager
+
+    def is_down(self, key: KeyInputEnum) -> bool:
+        """Returns True if the key is currently PRESSED or HELD."""
         state = self._manager._key_states.get(key)
-        return state == InputStateEnum.PRESSED
+        return state in (InputStateEnum.PRESSED, InputStateEnum.HELD)
 
     def get_metrics(self):
-        """Expose telemetry to the developer."""
-        return self._manager.telemetry.metrics if self._manager else None
+        """Access real-time input performance data."""
+        return self._manager.telemetry.metrics if self._manager.telemetry else None
